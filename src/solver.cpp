@@ -28,7 +28,7 @@ void solver_kernel(
   for (int x = 1; x < NUM_VARS; x++){
     var_truth_table[x] = 'U';
   }
-  var_truth_table[3] = 'F';
+  var_truth_table[3] = 'T';
   var_truth_table[42] = 'T';
   var_truth_table[48] = 'T';
 
@@ -41,7 +41,7 @@ void solver_kernel(
     local_clauses[x][2] = c3[x];
   }
 
-  #pragma ACCEL parallel flatten 
+  #pragma ACCEL parallel flatten reduction=unsatisfiable factor=128
   for (int x = 0; x < NUM_CLAUSES; x++){ 
     int l0_unsat =  (local_clauses[x][0] > 0) ? var_truth_table[local_clauses[x][0]] == 'F' :   var_truth_table[-local_clauses[x][0]] == 'T';
     int l1_unsat =  (local_clauses[x][1] > 0) ? var_truth_table[local_clauses[x][1]] == 'F' :   var_truth_table[-local_clauses[x][1]] == 'T';
