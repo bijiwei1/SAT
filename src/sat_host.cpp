@@ -5,8 +5,8 @@
 #include <assert.h>
 
 #define NUM_TEST 10
-#define NUM_CLAUSES 218
-#define NUM_VARS 51
+#define NUM_CLAUSES 1065
+#define NUM_VARS 250
 #define BUF_SIZE 20
 
 using std::cout;
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 //  for (int i = 1; i <= NUM_TEST; ++i) { 
     int i = 1; 
     auto ts1=std::chrono::high_resolution_clock::now(); 
-    std::string first("./data/uf50/tests/uf50-0");
+    std::string first("./data/uf250/tests/uf50-0");
 //    std::string first("./data/UUF50.218.1000/uuf50-0");
     std::string f_end(".cnf");
     //istd::string fileName=first+test_file+end;
