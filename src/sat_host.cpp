@@ -17,7 +17,7 @@ using std::to_string;
 #ifdef MCC_ACC
 #include MCC_ACC_H_FILE
 #else
-void digitrec_kernel(int* c1, int* c2, int* c3, int* result);
+void solver_kernel(int* c1, int* c2, int* c3, int* result);
 #endif
 
 // Util functions for host
@@ -51,13 +51,14 @@ int main(int argc, char **argv) {
 
   // Prepare data
   //std::string test_file="test"+to_string(test_idx);
-  for (int i = 1; i <= NUM_TEST; ++i) {
+//  for (int i = 1; i <= NUM_TEST; ++i) { 
+    int i = 1; 
     auto ts1=std::chrono::high_resolution_clock::now(); 
-    std::string first("./data/uf50-218/uf50-0");
+    std::string first("./data/uf50/tests/uf50-0");
 //    std::string first("./data/UUF50.218.1000/uuf50-0");
-    std::string end(".cnf");
+    std::string f_end(".cnf");
     //istd::string fileName=first+test_file+end;
-    std::string fileName=first+std::to_string(i)+end;
+    std::string fileName=first+std::to_string(i)+f_end;
     read_clause_file(fileName, c1, c2, c3, max_size, NUM_VARS, NUM_CLAUSES);
     int extra_buf_size = max_size[0] - BUF_SIZE;
     // cout << "Clause :"<< c1[0] << " " << c2[0]<< " " <<c3[0] << endl; 
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
     }else{
         cout << "Succeed" << endl; 
     }
-}    
+//}    
 
 #ifdef MCC_ACC
     __merlin_release();

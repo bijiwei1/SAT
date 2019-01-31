@@ -7,7 +7,7 @@
 //using namespace std; 
 
 #define NUM_CLAUSES 218  
-#define NUM_VARS 51
+#define NUM_VARS 250
 
 #pragma ACCEL kernel
 void solver_kernel(
@@ -18,9 +18,9 @@ void solver_kernel(
 #pragma ACCEL interface variable=c3 bus_bitwidth=512 depth = 1065
 #pragma ACCEL interface variable=result depth=1 
 
-  bool satisfiable; 
+  int satisfiable; 
   int unsatisfiable = 0; 
-  const int local_clauses[NUM_CLAUSES][3];
+  int local_clauses[NUM_CLAUSES][3];
   char var_truth_table[NUM_VARS]; // T, F, U (Undef) 
 
   //initialize buffer  
@@ -28,6 +28,10 @@ void solver_kernel(
   for (int x = 1; x < NUM_VARS; x++){
     var_truth_table[x] = 'U';
   }
+  var_truth_table[3] = 'F';
+  var_truth_table[42] = 'T';
+  var_truth_table[48] = 'T';
+
 
   //Load data
   printf("Start to load data \n");
@@ -45,8 +49,12 @@ void solver_kernel(
     unsatisfiable |= l0_unsat & l1_unsat & l2_unsat; 
   }
 
-  satisfiable = ~not_satisfiable; 
+  satisfiable = ~unsatisfiable; 
 
   printf("SAT result: %d\n", satisfiable);
+  printf("unSAT result: %d\n", unsatisfiable);
+
+
+  result[0] = satisfiable;
 
 }
