@@ -6,7 +6,7 @@
 //#include <string> 
 //using namespace std; 
 
-#define NUM_CLAUSES 1065  
+#define NUM_CLAUSES 1024
 #define NUM_VARS 250
 
 #pragma ACCEL kernel
@@ -41,7 +41,7 @@ void solver_kernel(
     local_clauses[x][2] = c3[x];
   }
 
-  #pragma ACCEL parallel flatten reduction=unsatisfiable factor=128
+  #pragma ACCEL parallel flatten reduction=unsatisfiable factor=32
   for (int x = 0; x < NUM_CLAUSES; x++){ 
     int l0_unsat =  (local_clauses[x][0] > 0) ? var_truth_table[local_clauses[x][0]] == 'F' :   var_truth_table[-local_clauses[x][0]] == 'T';
     int l1_unsat =  (local_clauses[x][1] > 0) ? var_truth_table[local_clauses[x][1]] == 'F' :   var_truth_table[-local_clauses[x][1]] == 'T';

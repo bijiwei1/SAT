@@ -22,8 +22,6 @@ using std::istringstream;
 
 void read_clause_file(string filename, int *c1, int *c2, int *c3, int *max_size, 
   const int num_var, const int num_clauses){
-    //int *pos_cls, int *neg_cls) {
-  //  int *pos_cls_idx, int *neg_cls_idx){
 
   ifstream f;
   int l1, l2, l3; 
@@ -48,6 +46,8 @@ void read_clause_file(string filename, int *c1, int *c2, int *c3, int *max_size,
   while (std::getline(f, line)) {
     if (line == "")
       continue;
+    if (cnt == num_clauses)
+      break;
     
     if (line.at(0) != 'p' and line.at(0) != 'c') {
       vector<string> substrs;

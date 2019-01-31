@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #define NUM_TEST 10
-#define NUM_CLAUSES 1065
+#define NUM_CLAUSES 1024
 #define NUM_VARS 250
 #define BUF_SIZE 20
 
