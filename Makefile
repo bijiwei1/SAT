@@ -22,7 +22,7 @@ endif
 
 # Accelerated Kernel settings
 KERNEL_NAME=solver_kernel
-KERNEL_SRC_FILES=./src/solver.cpp 
+KERNEL_SRC_FILES=./src/solver.cpp ./src/kernel_util.cpp
 KERNEL_INC_DIR=$(CXX_INC_DIRS)
 
 # MerlinCC Options

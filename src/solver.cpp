@@ -9,10 +9,28 @@
 #define NUM_CLAUSES 1024
 #define NUM_VARS 251
 
-#define BUF_CLS_SIZE 20
+#define BUF_CLS_SIZE 10
+#define extra_buf_size 30
 #define BUF_DED_SIZE 10
 
+#define TF 4
+#define FT 3
+#define F 2
+#define T 1
+#define U 0
+
+#define SOLVED 0
+#define DECISION 1
+#define PROP 2
+#define DEDUCTION 3
+#define BACKTRACK 4 
+#define FAILED 5
+#define EXIT 6
+
 void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
+  int lit, int x, 
+  int *extra_cls, int *extra_lit, 
+  int* num_extra);
 
 
 #pragma ACCEL kernel
@@ -28,14 +46,14 @@ void solver_kernel(
   int unsatisfiable = 0; 
   //Table and buffers
   int local_clauses[NUM_CLAUSES][3];
-  char var_truth_table[NUM_VARS] = {'U'}; 
+  char var_truth_table[NUM_VARS] = {U}; 
   // T, F, U (Undef), f(assigned to T first), t(assigned to F first)
   bool dec_ded_type[NUM_VARS] = {0}; // 0 - DEC, 1 - DED
-  int dec_lvl[NUM_VARS] = {0}
+  int dec_lvl[NUM_VARS] = {0};
   int buf_ded[BUF_DED_SIZE] = {-1};
   
-  int pos_cls[BUF_CLS_SIZE] = {-1}; 
-  int neg_cls[BUF_CLS_SIZE] = {-1}; 
+  int pos_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
+  int neg_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
   int extra_cls[extra_buf_size] = {0}; 
   int extra_lit[extra_buf_size] = {0}; 
 
@@ -46,6 +64,8 @@ void solver_kernel(
   int buf_ded_end = -1;
   //Other variables
   int state = DECISION; 
+  int prev_state = DECISION; 
+  int num_extra[1] = {0};
 
 
 /*************************** Loading Clauses ***************************/
@@ -61,8 +81,10 @@ void solver_kernel(
     collect_buffer(pos_cls, neg_cls, c3[x], x, extra_cls, extra_lit, num_extra);
   }
 
+
+
 /********************************* FSM **********************************/
-  while (state != EXIT){
+  while (state == EXIT){
     switch(state){
       case DECISION: 
         printf("State = DECISION; ");
@@ -83,7 +105,7 @@ void solver_kernel(
           //printf("Decide Var(%d)\n", new_var_idx);
           curr_lvl ++; 
 
-          if (pos_cls[new_var_idx][8] != -1){
+          if (pos_cls[new_var_idx][5] != -1){
             var_truth_table[new_var_idx] = T;
           }else {
             var_truth_table[new_var_idx] = F;
@@ -96,6 +118,7 @@ void solver_kernel(
         prev_state = DECISION; 
         break;
       case PROP:
+	int prop_var = 0; 
         if (prev_state == DECISION || prev_state == BACKTRACK){
           prop_var = new_var_idx;
           //printf("Decision Var(%d): %d\n", prop_var, var_truth_table[prop_var]);

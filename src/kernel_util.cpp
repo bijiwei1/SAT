@@ -5,7 +5,8 @@
 #include <stdio.h>
 
 #define NUM_VARS 251
-#define BUF_CLS_SIZE 20
+#define BUF_CLS_SIZE 10
+#define EMPTY -1
 
 void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
   int lit, int x, 
