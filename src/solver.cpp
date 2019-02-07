@@ -32,6 +32,7 @@ void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][B
   int *extra_cls, int *extra_lit, 
   int* num_extra);
 
+bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded);
 
 #pragma ACCEL kernel
 void solver_kernel(
@@ -82,9 +83,24 @@ void solver_kernel(
   }
 
 
+for (int x = 0; x < NUM_CLAUSES; x++){
+    printf("%d %d %d\n", local_clauses[x][0], local_clauses[x][1], local_clauses[x][2]);
+  }
+  for (int x = 1; x < NUM_VARS; x++){
+    printf("Pos var(%d): %d %d %d %d %d %d %d %d %d %d\n", x, 
+      pos_cls[x][0], pos_cls[x][1], pos_cls[x][2], pos_cls[x][3], pos_cls[x][4], 
+      pos_cls[x][5], pos_cls[x][6], pos_cls[x][7], pos_cls[x][8], pos_cls[x][9]); 
+    printf("Neg var(%d): %d %d %d %d %d %d %d %d %d %d\n", x, 
+      neg_cls[x][0], neg_cls[x][1], neg_cls[x][2], neg_cls[x][3], neg_cls[x][4], 
+      neg_cls[x][5], neg_cls[x][6], neg_cls[x][7], neg_cls[x][8], neg_cls[x][9]);
+  } 
+  printf("Extra cls buffer size : %d = %d\n", num_extra[0], extra_buf_size);
+  for (int x = 0; x < num_extra[0]; x++){
+    printf("Extra var(%d) at cls(%d) \n", extra_lit[x], extra_cls[x]);
+  }
 
 /********************************* FSM **********************************/
-  while (state == EXIT){
+  while (state != EXIT){
     switch(state){
       case DECISION: 
         printf("State = DECISION; ");
@@ -117,8 +133,9 @@ void solver_kernel(
 
         prev_state = DECISION; 
         break;
+
       case PROP:
-	int prop_var = 0; 
+	      int prop_var; 
         if (prev_state == DECISION || prev_state == BACKTRACK){
           prop_var = new_var_idx;
           //printf("Decision Var(%d): %d\n", prop_var, var_truth_table[prop_var]);
@@ -129,14 +146,33 @@ void solver_kernel(
         }
 
         /****************** Regular buffer *****************/
-        int l1[BUF_CLS_SIZE], l2[BUF_CLS_SIZE];
-
-/*
+        bool conflict[BUF_CLS_SIZE]; 
+        int l_ded[BUF_SIZE];
         #pragma ACCEL parallel flatten 
         for (int x = 0; x < BUF_CLS_SIZE; x++){
-          if ()
+          int l1, l2; 
+          conflict[x] = 0; 
+          l_ded[x] = 0; 
+          if(var_truth_table[prop_var] == T && neg_cls[prop_var][x] != EMPTY){
+            l1 = (local_clauses[neg_cls[prop_var][x]][0] == -prop_var)? 
+              local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][0];
+            l2 = (local_clauses[neg_cls[prop_var][x]][2] == -prop_var)? 
+              local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][2];
+            conflict[x] = deduction(l1, l2, var_truth_table, x, l_ded);
+          }else if (var_truth_table[prop_var] == F && pos_cls[prop_var][x] != EMPTY){
+            l1 = (local_clauses[pos_cls[prop_var][x]][0] == prop_var)? 
+              local_clauses[pos_cls[prop_var][x]][1] : local_clauses[pos_cls[prop_var][x]][0];
+            l2 = (local_clauses[pos_cls[prop_var][x]][2] == prop_var)? 
+              local_clauses[pos_cls[prop_var][x]][1] : local_clauses[pos_cls[prop_var][x]][2];
+            conflict[x] = deduction(l1, l2, var_truth_table, x, l_ded);
+          }
         }
-        */ 
+
+        #pragma ACCEL parallel flatten reduction=conflict
+        for (int x = 0; x < BUF_CLS_SIZE; x++){
+
+        }
+        
         break; 
 
     }//end of sw
