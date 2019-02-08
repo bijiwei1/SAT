@@ -122,14 +122,15 @@ bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
 bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
   //printf("Deduction: l1 - %d, l2 - %d\n", l1, l2); 
   bool conflict = 0; 
-  bool unsat1 = (l1 > 0) ? (var_truth_table[l1]==F) : (var_truth_table[-l1]==T);
-  bool unsat2 = (l2 > 0) ? (var_truth_table[l2]==F) : (var_truth_table[-l2]==T);
+  bool unsat1 = (l1 > 0) ? (var_truth_table[l1]==F || var_truth_table[l1]==TF) :
+                           (var_truth_table[-l1]==T || var_truth_table[-l1]==FT);
+  bool unsat2 = (l2 > 0) ? (var_truth_table[l2]==F || var_truth_table[l2]==TF) : 
+                           (var_truth_table[-l2]==T || var_truth_table[-l2]==FT);
 
   conflict = unsat1 & unsat2; 
   
-  l_ded[x] = conflict ? 0 : 
-    (var_truth_table[abs(l1)] == U) ? l1 : 
-    (var_truth_table[abs(l2)] == U) ? l2 : 0; 
-    
+
+  l_ded[x] = conflict ? 0 : unsat1 ? l2 : l1; 
+
   return conflict; 
 }

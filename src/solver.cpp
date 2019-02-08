@@ -67,6 +67,7 @@ void solver_kernel(
   int state = DECISION; 
   int prev_state = DECISION; 
   int num_extra[1] = {0};
+  int conf_var; 
 
 
 /*************************** Loading Clauses ***************************/
@@ -138,21 +139,21 @@ for (int x = 0; x < NUM_CLAUSES; x++){
 	      int prop_var; 
         if (prev_state == DECISION || prev_state == BACKTRACK){
           prop_var = new_var_idx;
-          //printf("Decision Var(%d): %d\n", prop_var, var_truth_table[prop_var]);
+          printf("Decision Var(%d): %d\n", prop_var, var_truth_table[prop_var]);
         }else if (prev_state == DEDUCTION){
           prop_var = abs(buf_ded[buf_ded_curr]);
-          buf_ded_curr ++; 
-          //printf("deduction Var(%d): %d\n", prop_var, var_truth_table[prop_var]);
+          printf("deduction Var(%d): %d\n", prop_var, var_truth_table[prop_var]);
         }
 
         /****************** Regular buffer *****************/
         bool conflict[BUF_CLS_SIZE]; 
         int l_ded[BUF_SIZE];
+        bool tot_conflict; 
         #pragma ACCEL parallel flatten 
         for (int x = 0; x < BUF_CLS_SIZE; x++){
           int l1, l2; 
-          conflict[x] = 0; 
-          l_ded[x] = 0; 
+          //conflict[x] = 0; 
+          //l_ded[x] = 0; 
           if(var_truth_table[prop_var] == T && neg_cls[prop_var][x] != EMPTY){
             l1 = (local_clauses[neg_cls[prop_var][x]][0] == -prop_var)? 
               local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][0];
@@ -168,12 +169,62 @@ for (int x = 0; x < NUM_CLAUSES; x++){
           }
         }
 
-        #pragma ACCEL parallel flatten reduction=conflict
+        #pragma ACCEL parallel flatten reduction=tot_conflict
         for (int x = 0; x < BUF_CLS_SIZE; x++){
-
+           tot_conflict |= conflict[x]; 
         }
         
+        state = DEDUCTION; 
         break; 
+
+      case DEDUCTION: 
+        prev_state = DEDUCTION; 
+        if (tot_conflict){
+          state = BACKTRACK;
+          break; // jump out of this case 
+        }
+
+        
+        for (int x = 0; x < BUF_CLS_SIZE; x++){
+          if (l_ded[x] != 0){
+            buf_ded_end ++;
+            buf_ded[buf_ded_end] = l_ded[x]; 
+          }
+        }
+
+        if (buf_ded_end == buf_ded_curr){
+          //No deducted variable in buf_ded
+          state = DECISION;
+          buf_ded_curr = -1;
+          buf_ded_end = -1; 
+
+        }else{
+          //Move to next variable in buf_ded
+          buf_ded_curr ++;  
+          int prop_var = buf_ded[buf_ded_curr]; 
+
+          //Check whether conflict in same level deduction 
+          bool conf_ded = prop_var > 0 ? (var_truth_table[prop_var] == T) : 
+                                      (var_truth_table[-prop_var] == F); 
+          if (conf_ded){
+            state = BACKTRACK; 
+            conf_var = abs(prop_var);
+          }else{
+            state = PROP;
+            dec_ded_type[abs(prop_var)] = 1; // DEC
+            dec_lvl[abs(prop_var)] = curr_lvl; 
+          } 
+        }
+
+        break; 
+      case BACKTRACK:
+        printf("Conflict var %d with dec_lvl %d \n", conf_var,dec_lvl[conf_var]);
+        state = EXIT; 
+        break; 
+
+      case SOLVED:
+        state = EXIT;
+        break;  
 
     }//end of sw
   }//end of while
