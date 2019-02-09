@@ -6,6 +6,7 @@
 
 #define NUM_VARS 251
 #define BUF_CLS_SIZE 10
+
 #define EMPTY -1
 
 #define TF 4
@@ -75,49 +76,6 @@ void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][B
   }
 }
 
-/*
-bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
-  //printf("Deduction: l1 - %d, l2 - %d\n", l1, l2); 
-  int conflict = 0; 
-  if (l1>0 && l2>0){ 
-    if (var_truth_table[l1] == F && var_truth_table[l2] == F){ // F & F
-      conflict = 1;
-    }else if (var_truth_table[l1] == F && var_truth_table[l2] == Undef){ 
-      l_ded[x] = l2; 
-    }else if (var_truth_table[l1] == Undef && var_truth_table[l2] == F){
-      l_ded[x] = l1; 
-    }
-
-  }else if (l1>0 && l2<0){ 
-    if (var_truth_table[l1] == F && var_truth_table[-l2] == T){ // F | ~T
-      conflict = 1;
-    }else if (var_truth_table[l1] == F && var_truth_table[-l2] == Undef){ 
-      l_ded[x] = l2; 
-    }else if (var_truth_table[l1] == Undef && var_truth_table[-l2] == T){
-      l_ded[x] = l1; 
-    }
-     
-  }else if (l1<0 && l2>0){
-    if (var_truth_table[-l1] == T && var_truth_table[l2] == F){ // ~T & F
-      conflict = 1;
-    }else if (var_truth_table[-l1] == T && var_truth_table[l2] == Undef){ 
-      l_ded[x] = l2; 
-    }else if (var_truth_table[-l1] == Undef && var_truth_table[l2] == F){
-      l_ded[x] = l1; 
-    }
-
-  }else{
-    if (var_truth_table[-l1] == T && var_truth_table[-l2] == T){ // ~T & ~T
-      conflict = 1;
-    }else if (var_truth_table[-l1] == T && var_truth_table[-l2] == Undef){ 
-      l_ded[x] = l2; 
-    }else if (var_truth_table[-l1] == Undef && var_truth_table[-l2] == T){
-      l_ded[x] = l1; 
-    }
-
-  }
-  return conflict; 
-}*/
 
 bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
   //printf("Deduction: l1 - %d, l2 - %d\n", l1, l2); 
@@ -133,4 +91,17 @@ bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
   l_ded[x] = conflict ? 0 : unsat1 ? l2 : l1; 
 
   return conflict; 
+}
+
+void sort (int array[4]){
+  int hi1 = (array[0] > array[1]) ? array[0] : array[1]; 
+  int hi2 = (array[2] > array[3]) ? array[2] : array[3];  
+  int lo1 = (array[0] <= array[1]) ? array[0] : array[1];
+  int lo2 = (array[2] <= array[3]) ? array[0] : array[1]; 
+
+  array[0] = lo1 < lo2 ? lo1 : lo2; 
+  array[3] = hi1 > hi2 ? hi1 : hi2; 
+
+  array[1] = lo1 < lo2 ? (lo2 < hi1 ? lo2 : hi1) : (lo1 < hi2 ? lo1 : hi2);
+  array[2] = hi1 > hi2 ? (hi2 > lo1 ? hi2 : lo1) : (hi1 > lo2 ? hi1 : lo2); 
 }
