@@ -84,6 +84,9 @@ void solver_kernel(
   int parent1, parent2, parent3, parent4;
   int parent_lvl[4]; 
   int back_lvl = 0; 
+  bool conf_ded;
+  int tmp_conf_cls; 
+  int prev_assigned_value;
 
 /*************************** Initializing array ***************************/
 
@@ -184,6 +187,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         #pragma ACCEL parallel flatten 
         for (int x = 0; x < BUF_CLS_SIZE; x++){
           int l1, l2; 
+	  l_ded[x] = 0; 
           if(var_truth_table[prop_var] == T && neg_cls[prop_var][x] != EMPTY){
             l1 = (local_clauses[neg_cls[prop_var][x]][0] == -prop_var)? 
               local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][0];
@@ -193,6 +197,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
             cls_ded[x] = neg_cls[prop_var][x];
             if (conflict[x]){
 	           printf("Found conflict @cls(%d)\n", neg_cls[prop_var][x]);
+	      tmp_conf_cls = neg_cls[prop_var][x];
 		        }
           }else if (var_truth_table[prop_var] == F && pos_cls[prop_var][x] != EMPTY){
             l1 = (local_clauses[pos_cls[prop_var][x]][0] == prop_var)? 
@@ -203,6 +208,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
             cls_ded[x] = pos_cls[prop_var][x];
             if (conflict[x]){
 	           printf("Found conflict @cls(%d)\n", pos_cls[prop_var][x]);
+	      tmp_conf_cls = pos_cls[prop_var][x];
             }
           }
         }
@@ -218,30 +224,43 @@ for (int x = 0; x < NUM_CLAUSES; x++){
       case DEDUCTION: 
         printf("State = DED; ");
         if (tot_conflict){
-          state = (prev_state == DECISION) ? BACKTRACK2: BACKTRACK;
-          break; // jump out of this case 
-        }
+	  if(prev_state == DECISION){
+	    state = BACKTRACK2; 
+	    break;       
+	  }else{
+	  state = BACKTRACK;
+          conf_var = buf_ded[buf_ded_curr];
+          conf_cls = tmp_conf_cls;
+          buf_ded_curr = -1; 
+          buf_ded_end = -1;
+	  printf("Found conflict Var(%d) due to cls(%d) with parentcls(%d)\n", conf_var, conf_cls,);
+	  break; 
+	  }
+	}
 
         prev_state = DEDUCTION; 
-        bool conf_ded = 0;  
+        conf_ded = 0;  
         for (int x = 0; x < BUF_CLS_SIZE; x++){
           if (l_ded[x] != 0){ 
-            buf_ded_end ++;
-            buf_ded[buf_ded_end] = l_ded[x]; 
-            buf_ded_cls[buf_ded_end] = cls_ded[x]; 
-            printf("Add ded var(%d) to buf ----- cls : %d %d %d\n", l_ded[x], local_clauses[cls_ded[x]][0], local_clauses[cls_ded[x]][1], local_clauses[cls_ded[x]][2]);
-            //Change ded value here
             if (var_truth_table[abs(l_ded[x])] == U){
+              buf_ded_end ++;
+              buf_ded[buf_ded_end] = l_ded[x]; 
+              buf_ded_cls[buf_ded_end] = cls_ded[x]; 
+              printf("Add ded var(%d) to buf ----- cls : %d %d %d\n", l_ded[x], local_clauses[cls_ded[x]][0], local_clauses[cls_ded[x]][1], local_clauses[cls_ded[x]][2]);
+              //Change ded value here
               dec_lvl[abs(l_ded[x])] = curr_lvl;  
               parent_cls[abs(l_ded[x])] = cls_ded[x]; 
               var_truth_table[abs(l_ded[x])] = l_ded[x] > 0 ? T : F;
               printf("Change VTT Var(%d) to %d\n", abs(l_ded[x]), var_truth_table[abs(l_ded[x])]);
-            }else if ((var_truth_table[abs(l_ded[x])] == T && l_ded[x] < 0) || (var_truth_table[abs(l_ded[x])] == F && l_ded[x] < 0) ){
+            }else if ((var_truth_table[abs(l_ded[x])] == T && l_ded[x] < 0) || (var_truth_table[abs(l_ded[x])] == F && l_ded[x] > 0) ){
                 //Check whether conflict in same level deduction 
                 conf_ded=1; 
                 conf_var = abs(l_ded[x]);
                 conf_cls = cls_ded[x];
-            }
+		printf("Found conflict Var(%d) due to cls(%d) with parentcls(%d)\n", conf_var, conf_cls, parent_cls[abs(l_ded[x])]);
+            }else{
+                printf("Duplicate ded var(%d) ----- cls : %d %d %d\n", l_ded[x], local_clauses[cls_ded[x]][0], local_clauses[cls_ded[x]][1], local_clauses[cls_ded[x]][2]);
+		}
           }
         }
 
@@ -291,6 +310,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         printf("State = BACKTRACK2; ");
         var_truth_table[new_var_idx] = (var_truth_table[new_var_idx] == T) ? TF : FT; 
         prev_state = DECISION; 
+	state = PROP;
         break;
 
       case BACKTRACK:
@@ -312,18 +332,19 @@ for (int x = 0; x < NUM_CLAUSES; x++){
 	     parent_lvl[3] = dec_lvl[parent4];
 
         sort(parent_lvl); 
-
+        printf("Parents lvl %d %d %d %d", parent_lvl[0], parent_lvl[1], parent_lvl[2], parent_lvl[3]);
         back_lvl = var_truth_table[dec_var[parent_lvl[3]]] <= F ? parent_lvl[3] : 
                       var_truth_table[dec_var[parent_lvl[2]]] <= F ? parent_lvl[2] : 
                       var_truth_table[dec_var[parent_lvl[1]]] <= F ? parent_lvl[1] : 
                       var_truth_table[dec_var[parent_lvl[0]]] <= F ? parent_lvl[0] : -1; 
 
-	       printf("Back_lvl %d", back_lvl);
+	printf("Back_lvl %d", back_lvl);
         if (back_lvl == -1){
           state = FAILED; 
           break; 
         }
 
+	prev_assigned_value = var_truth_table[dec_var[back_lvl]]; 
         //Undo all variable assignment after back_lvl
         #pragma ACCEL parallel flatten
         for (int i = 0; i < NUM_VARS; i ++){
@@ -334,11 +355,12 @@ for (int x = 0; x < NUM_CLAUSES; x++){
           }
         }
 
-        var_truth_table[dec_var[back_lvl]] = (var_truth_table[dec_var[back_lvl]] == T) ? TF : FT;
+        var_truth_table[dec_var[back_lvl]] = (prev_assigned_value == T) ? TF : FT;
+        printf("Change VTT Var(%d) to %d\n", dec_var[back_lvl], var_truth_table[dec_var[back_lvl]]);
         dec_lvl[dec_var[back_lvl]] = back_lvl;
 
 
-	   #pragma ACCEL parallel flatten
+  	#pragma ACCEL parallel flatten
         for (int i = 0; i < 100; i++){
           if (i > back_lvl){
             dec_var[i] = 0; 
