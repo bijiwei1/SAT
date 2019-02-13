@@ -77,7 +77,7 @@ void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][B
 }
 
 
-bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
+bool deduction(int l1, int l2, char *var_truth_table, int x, int *l_ded){
   //printf("Deduction: l1 - %d, l2 - %d\n", l1, l2); 
   bool conflict = 0; 
   bool unsat1 = (l1 > 0) ? (var_truth_table[l1]==F || var_truth_table[l1]==TF) :
@@ -86,9 +86,8 @@ bool deduction(int l1, int l2, int *var_truth_table, int x, int *l_ded){
                            (var_truth_table[-l2]==T || var_truth_table[-l2]==FT);
 
   conflict = unsat1 & unsat2; 
-  
 
-  l_ded[x] = conflict ? 0 : unsat1 ? l2 : l1; 
+  l_ded[x] = (unsat1 && var_truth_table[abs(l2)]==U)? l2 : (unsat2 && var_truth_table[abs(l1)]==U)? l1 : 0; 
 
   return conflict; 
 }
