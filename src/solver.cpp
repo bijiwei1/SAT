@@ -290,7 +290,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         printf("State = BACKTRACK; ");
         prev_state = BACKTRACK;
         printf("Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
-
+/*
         parent1 = abs(local_clauses[parent_cls[conf_var]][0]) == conf_var ? abs(local_clauses[parent_cls[conf_var]][1]) : abs(local_clauses[parent_cls[conf_var]][0]); 
         parent2 = abs(local_clauses[parent_cls[conf_var]][2]) == conf_var ? abs(local_clauses[parent_cls[conf_var]][1]) : abs(local_clauses[parent_cls[conf_var]][2]); 
         parent3 = abs(local_clauses[conf_cls][0]) == conf_var ? abs(local_clauses[conf_cls][1]) : abs(local_clauses[conf_cls][0]); 
@@ -308,14 +308,24 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         back_lvl = var_truth_table[dec_var[parent_lvl[3]]] <= F ? parent_lvl[3] : 
                       var_truth_table[dec_var[parent_lvl[2]]] <= F ? parent_lvl[2] : 
                       var_truth_table[dec_var[parent_lvl[1]]] <= F ? parent_lvl[1] : 
-                      var_truth_table[dec_var[parent_lvl[0]]] <= F ? parent_lvl[0] : -1; 
+                      var_truth_table[dec_var[parent_lvl[0]]] <= F ? parent_lvl[0] : -1;  
+*/
 
-
-	printf("Back_lvl %d", back_lvl);
-        if (back_lvl == -1){
+	//printf("Back_lvl %d", back_lvl);
+	back_lvl = curr_lvl; 
+	while(var_truth_table[dec_var[back_lvl]] == TF || var_truth_table[dec_var[back_lvl]] == FT){
+	  back_lvl --; 
+	}
+        //state = FAILED; 
+ 	
+        if (back_lvl < 0){
+	  printf("Failed at lvl %d\n", back_lvl);
           state = FAILED; 
           break; 
-        }
+        }else{
+	  printf("Back to lvl %d\n", back_lvl);
+	}
+ 	
 
 	prev_assigned_value = var_truth_table[dec_var[back_lvl]]; 
         //Undo all variable assignment after back_lvl
