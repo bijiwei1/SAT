@@ -4,10 +4,7 @@
 #include <fstream>
 #include <assert.h>
 
-#define NUM_TEST 10
-#define NUM_CLAUSES 1024
-#define NUM_VARS 250
-#define BUF_SIZE 20
+#include <config.h>
 
 using std::cout;
 using std::endl;
@@ -60,7 +57,7 @@ int main(int argc, char **argv) {
     //istd::string fileName=first+test_file+end;
     std::string fileName=first+std::to_string(i)+f_end;
     read_clause_file(fileName, c1, c2, c3, max_size, NUM_VARS, NUM_CLAUSES);
-    int extra_buf_size = max_size[0] - BUF_SIZE;
+    cout << "Max Number of cls for the same variable is " << max_size[0]<<endl;
     // cout << "Clause :"<< c1[0] << " " << c2[0]<< " " <<c3[0] << endl; 
     auto ts2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> readtime = ts2 -ts1; 

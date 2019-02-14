@@ -4,17 +4,46 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define NUM_VARS 251
-#define BUF_CLS_SIZE 10
-
-#define EMPTY -1
-
-#define TF 4
-#define FT 3
-#define F 2
-#define T 1
-#define U 0
-
+#include <config.h>
+void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
+  int lit, int x, 
+  int *extra_cls, int *extra_lit, 
+  int* num_extra){
+   
+  int i = 0; 
+  if (lit > 0){
+    while (i<BUF_CLS_SIZE){
+      if (pos_cls[lit][i] == EMPTY){
+        break;
+      }else {
+        i ++; 
+      }
+    }
+    if (i>=BUF_CLS_SIZE){
+      extra_cls[num_extra[0]]= x; 
+      extra_lit[num_extra[0]] = lit;
+      num_extra[0] ++; 
+    }else {
+      pos_cls[lit][i] = x; 
+    }
+  }else {
+    while (i<BUF_CLS_SIZE){
+      if (neg_cls[-lit][i] == EMPTY){
+        break;
+      }else {
+        i ++; 
+      }
+    }
+    if (i>=BUF_CLS_SIZE){
+      extra_cls[num_extra[0]]= x; 
+      extra_lit[num_extra[0]] = lit;
+      num_extra[0] ++; 
+    }else {
+      neg_cls[-lit][i] = x; 
+    }
+  }
+}
+/*
 void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
   int lit, int x, 
   int *extra_cls, int *extra_lit, 
@@ -74,7 +103,7 @@ void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][B
     }
 
   }
-}
+}*/
 
 
 bool deduction(int l1, int l2, char *var_truth_table, int x, int *l_ded){
@@ -96,7 +125,7 @@ void sort (int array[4]){
   int hi1 = (array[0] > array[1]) ? array[0] : array[1]; 
   int hi2 = (array[2] > array[3]) ? array[2] : array[3];  
   int lo1 = (array[0] <= array[1]) ? array[0] : array[1];
-  int lo2 = (array[2] <= array[3]) ? array[0] : array[1]; 
+  int lo2 = (array[2] <= array[3]) ? array[2] : array[3]; 
 
   array[0] = lo1 < lo2 ? lo1 : lo2; 
   array[3] = hi1 > hi2 ? hi1 : hi2; 
