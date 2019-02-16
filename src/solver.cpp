@@ -140,7 +140,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
 
         while (new_var_idx < NUM_VARS){
           if (var_truth_table[new_var_idx] != U){
-            printf("Skip var %d(Value - %d)\n", new_var_idx, var_truth_table[new_var_idx]); 
+            //printf("Skip var %d(Value - %d)\n", new_var_idx, var_truth_table[new_var_idx]); 
             new_var_idx ++; 
           }else{
             break; 
@@ -151,7 +151,9 @@ for (int x = 0; x < NUM_CLAUSES; x++){
           state = SOLVED; 
         }else {
           state = PROP;
-          printf("Decide Var(%d)\n", new_var_idx);
+	  if (curr_lvl < 15){
+            printf("Decide Var(%d)\n", new_var_idx);
+	  }
           curr_lvl ++; 
 
           if (pos_cls[new_var_idx][5] != -1){
@@ -216,12 +218,16 @@ for (int x = 0; x < NUM_CLAUSES; x++){
 */
         #pragma ACCEL parallel flatten reduction=tot_conflict
 	for (int x = 0; x < NUM_CLAUSES; x++){
-	  tot_conflict |= (local_clauses[x][0]<0 ? (local_clauses[x][0] == T||local_clauses[x][0] == FT) : (local_clauses[x][0] == F||local_clauses[x][0] == TF)) 
-	  && (local_clauses[x][1]<0 ? (local_clauses[x][1] == T||local_clauses[x][1] == FT) : (local_clauses[x][1] == F||local_clauses[x][1] == TF)) 
-	  && (local_clauses[x][2]<0 ? (local_clauses[x][2] == T||local_clauses[x][2] == FT) : (local_clauses[x][2] == F||local_clauses[x][2] == TF)) ;
+	  int l1_tmp = local_clauses[x][0];
+	  int l2_tmp = local_clauses[x][1];
+	  int l3_tmp = local_clauses[x][2];
+	  bool unsat1 = l1_tmp >0 ? (var_truth_table[l1_tmp] == F || var_truth_table[l1_tmp] == TF): (var_truth_table[-l1_tmp] == T || var_truth_table[-l1_tmp] == FT);
+	  bool unsat2 = l2_tmp >0 ? (var_truth_table[l2_tmp] == F || var_truth_table[l2_tmp] == TF): (var_truth_table[-l2_tmp] == T || var_truth_table[-l2_tmp] == FT);
+	  bool unsat3 = l3_tmp >0 ? (var_truth_table[l3_tmp] == F || var_truth_table[l3_tmp] == TF): (var_truth_table[-l3_tmp] == T || var_truth_table[-l3_tmp] == FT);
+ 	  tot_conflict |= (unsat1 && unsat2 && unsat3);
 	}
 
-	if (tot_conflict){
+	if (tot_conflict && prev_state == DECISION){
 	  state = BACKTRACK2; 
 	}else{
           state = DEDUCTION; 

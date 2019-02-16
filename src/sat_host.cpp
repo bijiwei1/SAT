@@ -48,11 +48,12 @@ int main(int argc, char **argv) {
 
   // Prepare data
   //std::string test_file="test"+to_string(test_idx);
-//  for (int i = 1; i <= NUM_TEST; ++i) { 
-    int i = 1; 
+  //for (int i = 1; i <= NUM_TEST; ++i) { 
+  //for (int i = 1; i <= 5; ++i) { 
+    int i = 5; 
     auto ts1=std::chrono::high_resolution_clock::now(); 
     //std::string first("./data/uf250/tests/uf250-0");
-    std::string first("./data/uuf250/tests/uuf250-0");
+    std::string first("./data/uf250/tests/uf250-0");
     std::string f_end(".cnf");
     //istd::string fileName=first+test_file+end;
     std::string fileName=first+std::to_string(i)+f_end;
@@ -79,7 +80,7 @@ int main(int argc, char **argv) {
     }else{
         cout << "Succeed" << endl; 
     }
-//}    
+//}//Comment this out for testing
 
 #ifdef MCC_ACC
     __merlin_release();
