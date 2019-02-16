@@ -51,8 +51,8 @@ int main(int argc, char **argv) {
 //  for (int i = 1; i <= NUM_TEST; ++i) { 
     int i = 1; 
     auto ts1=std::chrono::high_resolution_clock::now(); 
-    std::string first("./data/uf250/tests/uf250-0");
-//    std::string first("./data/UUF50.218.1000/uuf50-0");
+    //std::string first("./data/uf250/tests/uf250-0");
+    std::string first("./data/uuf250/tests/uuf250-0");
     std::string f_end(".cnf");
     //istd::string fileName=first+test_file+end;
     std::string fileName=first+std::to_string(i)+f_end;
