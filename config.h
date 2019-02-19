@@ -6,6 +6,7 @@
 #define BUF_CLS_SIZE 22
 #define extra_buf_size 30
 #define BUF_DED_SIZE 250
+#define LEARN_TABLE_SIZE 50
 
 #define TF 4
 #define FT 3
@@ -23,4 +24,5 @@
 #define BACKTRACK2 7
 
 #define EMPTY -1
+
 
