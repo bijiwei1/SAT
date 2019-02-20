@@ -8,6 +8,7 @@
 #define BUF_DED_SIZE 250
 #define LEARN_TABLE_SIZE 50
 
+
 #define TF 4
 #define FT 3
 #define F 2
