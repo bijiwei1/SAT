@@ -24,7 +24,7 @@
 #define BACKTRACK 5
 #define FAILED 6
 #define EXIT 7
-#define BACKTRACK2 8
+#define BACKTRACK_DEC 8
 
 #define EMPTY -1
 
