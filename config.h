@@ -6,7 +6,7 @@
 #define BUF_CLS_SIZE 22
 #define extra_buf_size 30
 #define BUF_DED_SIZE 250
-#define LEARN_TABLE_SIZE 50
+#define LEARN_TABLE_SIZE 100
 
 
 #define TF 4
@@ -19,10 +19,11 @@
 #define DECISION 1
 #define PROP 2
 #define DEDUCTION 3
-#define BACKTRACK 4
-#define FAILED 5
-#define EXIT 6
-#define BACKTRACK2 7
+#define ANALYSIS 4
+#define BACKTRACK 5
+#define FAILED 6
+#define EXIT 7
+#define BACKTRACK2 8
 
 #define EMPTY -1
 

@@ -121,7 +121,7 @@ bool deduction(int l1, int l2, char *var_truth_table, int x, int *l_ded){
   return conflict; 
 }
 
-void sort (int array[4]){
+void sort4 (int array[4]){
   int hi1 = (array[0] > array[1]) ? array[0] : array[1]; 
   int hi2 = (array[2] > array[3]) ? array[2] : array[3];  
   int lo1 = (array[0] <= array[1]) ? array[0] : array[1];
@@ -133,3 +133,14 @@ void sort (int array[4]){
   array[1] = lo1 < lo2 ? (lo2 < hi1 ? lo2 : hi1) : (lo1 < hi2 ? lo1 : hi2);
   array[2] = hi1 > hi2 ? (hi2 > lo1 ? hi2 : lo1) : (hi1 > lo2 ? hi1 : lo2); 
 }
+/*
+void sort3 (int array[3]){
+  int lowest = ((array[0] < array[1]) && (array[0] < array[2]))? array[0] ? (array[1] < array[2]) ? array[1] : array[2]; 
+  int highest = ((array[0] > array[1]) && (array[0] > array[2]))? array[0] ? (array[1] > array[2]) ? array[1] : array[2]; 
+  int middle = (array[0] != highest && array[0] != lowest)? array[0] : (array[1] != highest && array[1] != lowest)? array[1] : array[2];
+  array[0] = lowest; 
+  array[1] = middle; 
+  array[2] = highest; 
+}*/
+
+
