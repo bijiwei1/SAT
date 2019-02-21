@@ -7,6 +7,7 @@
 #define extra_buf_size 30
 #define BUF_DED_SIZE 250
 #define LEARN_TABLE_SIZE 100
+#define BUF_DEC_LVL 100
 
 
 #define TF 4
