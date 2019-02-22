@@ -4,7 +4,7 @@
 #define NUM_VARS 251
 
 #define BUF_CLS_SIZE 22
-#define extra_buf_size 30
+#define extra_buf_size 10
 #define BUF_DED_SIZE 250
 #define LEARN_TABLE_SIZE 100
 #define BUF_DEC_LVL 100
