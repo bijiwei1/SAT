@@ -133,6 +133,23 @@ void sort4 (int array[4]){
   array[1] = lo1 < lo2 ? (lo2 < hi1 ? lo2 : hi1) : (lo1 < hi2 ? lo1 : hi2);
   array[2] = hi1 > hi2 ? (hi2 > lo1 ? hi2 : lo1) : (hi1 > lo2 ? hi1 : lo2); 
 }
+
+void sort4_idx (int array[4], int idx[4]){
+
+  int hi1 = (array[0] > array[1]) ? 0 : 1; 
+  int hi2 = (array[2] > array[3]) ? 2 : 3;  
+  int lo1 = (array[0] <= array[1]) ? 0 : 1;
+  int lo2 = (array[2] <= array[3]) ? 2 : 3; 
+
+  idx[0] = array[lo1] < array[lo2] ? lo1 : lo2; 
+  idx[3] = array[hi1] > array[hi2] ? hi1 : hi2; 
+
+  idx[1] = array[lo1] < array[lo2] ? (array[lo2] < array[hi1] ? lo2 : hi1) : (array[lo1] < array[hi2] ? lo1 : hi2);
+  idx[2] = array[hi1] > array[hi2] ? (array[hi2] > array[lo1] ? hi2 : lo1) : (array[hi1] > array[lo2] ? hi1 : lo2); 
+
+}
+
+
 /*
 void sort3 (int array[3]){
   int lowest = ((array[0] < array[1]) && (array[0] < array[2]))? array[0] ? (array[1] < array[2]) ? array[1] : array[2]; 
