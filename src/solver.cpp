@@ -140,7 +140,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
   while (state != EXIT){
     switch(state){
       case DECISION: 
-//        printf("State = DECISION; ");
+        printf("State = DECISION; ");
 
         while (new_var_idx < NUM_VARS){
           if (var_truth_table[new_var_idx] != U){
@@ -156,7 +156,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         }else {
           state = PROP;
           curr_lvl ++; 
-//          printf("Decide Var(%d) - at lvl %d\n", new_var_idx, curr_lvl);
+          printf("Decide Var(%d) - at lvl %d\n", new_var_idx, curr_lvl);
 
           if (pos_cls[new_var_idx][5] != -1){
             var_truth_table[new_var_idx] = T;
@@ -220,7 +220,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
               l1 = learn_cls_table[x][1]; 
               l2 = learn_cls_table[x][2];
               conflict_learn[x] = deduction(l1, l2, var_truth_table, x, l_ded_learn);
-              cls_ded_learn[x] = x + NUM_CLAUSES;
+              cls_ded_learn[x] = x;
               //if (conflict_learn[x]){ printf("Found conflict at learn table @cls(%d)\n", x);}
             }
           }else if (abs(learn_cls_table[x][1]) == prop_var){
@@ -229,7 +229,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
               l1 = learn_cls_table[x][0]; 
               l2 = learn_cls_table[x][2];
               conflict_learn[x] = deduction(l1, l2, var_truth_table, x, l_ded_learn);
-              cls_ded_learn[x] = x + NUM_CLAUSES;
+              cls_ded_learn[x] = x;
               //if (conflict_learn[x]){ printf("Found conflict at learn table @cls(%d)\n", x);}
             }
           }else if ((learn_cls_table[x][2]) == prop_var){
@@ -238,7 +238,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
               l1 = learn_cls_table[x][0]; 
               l2 = learn_cls_table[x][1];
               conflict_learn[x] = deduction(l1, l2, var_truth_table, x, l_ded_learn);
-              cls_ded_learn[x] = x + NUM_CLAUSES;
+              cls_ded_learn[x] = x;
               //if (conflict_learn[x]){ printf("Found conflict at learn table @cls(%d)\n", x);}
             }
           }else{
@@ -312,17 +312,17 @@ for (int x = 0; x < NUM_CLAUSES; x++){
 		int tmp1 = learn_cls_table[cls_ded_learn[x]][0];
 		int tmp2 = learn_cls_table[cls_ded_learn[x]][1];
 		int tmp3 = learn_cls_table[cls_ded_learn[x]][2];
-             printf("Add ded var(%d) to buf ----- cls : %d(%d) %d(%d) %d(%d) (declvl %d)\n", l_ded_learn[x],tmp1, dec_lvl[abs(tmp1)], tmp2, dec_lvl[abs(tmp2)], tmp3, dec_lvl[abs(tmp3)], curr_lvl);
+             printf("Add learned ded var(%d) to buf ----- cls : %d(%d) %d(%d) %d(%d) (declvl %d)\n", l_ded_learn[x],tmp1, dec_lvl[abs(tmp1)], tmp2, dec_lvl[abs(tmp2)], tmp3, dec_lvl[abs(tmp3)], curr_lvl);
               //Change ded value here
               dec_lvl[abs(l_ded_learn[x])] = curr_lvl;  
-              parent_cls[abs(l_ded_learn[x])] = cls_ded_learn[x]; 
+              parent_cls[abs(l_ded_learn[x])] = cls_ded_learn[x] + NUM_CLAUSES; 
               var_truth_table[abs(l_ded_learn[x])] = l_ded[x] > 0 ? T : F;
               //printf("Change VTT Var(%d) to %d\n", abs(l_ded_learn[x]), var_truth_table[abs(l_ded_learn[x])]);
             }else if ((var_truth_table[abs(l_ded_learn[x])] == T && l_ded_learn[x] < 0) || (var_truth_table[abs(l_ded_learn[x])] == F && l_ded_learn[x] > 0) ){
                 //Check whether conflict in same level deduction 
                 conf_ded=1; 
                 conf_var = abs(l_ded_learn[x]);
-                conf_cls = cls_ded_learn[x];
+                conf_cls = cls_ded_learn[x] + NUM_CLAUSES;
                 //printf("Found learn conflict Var(%d) due to cls(%d) with parentcls(%d)\n", conf_var, conf_cls, parent_cls[abs(l_ded_learn[x])]);
             }else{
                 //printf("Duplicate ded var(%d) ----- cls : %d %d %d\n", l_ded[x], local_clauses[cls_ded[x]][0], local_clauses[cls_ded[x]][1], local_clauses[cls_ded[x]][2]);
@@ -526,10 +526,10 @@ for (int x = 0; x < NUM_CLAUSES; x++){
           }
         }
 
-        var_truth_table[dec_var[back_lvl]] = (prev_assigned_value == T) ? TF : FT;
-        dec_lvl[dec_var[back_lvl]] = back_lvl;
-        //printf("Change VTT Var(%d) to %d\n", dec_var[back_lvl], var_truth_table[dec_var[back_lvl]]);
         new_var_idx = dec_var[back_lvl]; 
+        var_truth_table[new_var_idx] = (prev_assigned_value == T) ? TF : FT;
+        dec_lvl[new_var_idx] = back_lvl;
+        //printf("Change VTT Var(%d) to %d\n", dec_var[back_lvl], var_truth_table[dec_var[back_lvl]]);
         curr_lvl = back_lvl; 
 
         state = PROP;
