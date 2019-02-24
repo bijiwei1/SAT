@@ -1,8 +1,8 @@
 #define NUM_TEST 10
 
 #define NUM_TOT_CLAUSES 1200
-
 #define NUM_ORG_CLAUSES 1024
+
 #define NUM_VARS 251
 
 #define BUF_CLS_SIZE 22

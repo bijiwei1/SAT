@@ -28,9 +28,9 @@ int main(int argc, char **argv) {
   auto start = std::chrono::high_resolution_clock::now();
   std::ofstream wf;
   wf.open("time.txt");
-  int *c1 = (int *)malloc(sizeof(int) * NUM_CLAUSES);
-  int *c2 = (int *)malloc(sizeof(int) * NUM_CLAUSES);
-  int *c3 = (int *)malloc(sizeof(int) * NUM_CLAUSES);
+  int *c1 = (int *)malloc(sizeof(int) * NUM_ORG_CLAUSES);
+  int *c2 = (int *)malloc(sizeof(int) * NUM_ORG_CLAUSES);
+  int *c3 = (int *)malloc(sizeof(int) * NUM_ORG_CLAUSES);
   int *max_size = (int *)malloc(sizeof(int) * 1); 
  
   int *result = (int *)malloc(sizeof(int));
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     std::string f_end(".cnf");
     //istd::string fileName=first+test_file+end;
     std::string fileName=first+std::to_string(i)+f_end;
-    read_clause_file(fileName, c1, c2, c3, max_size, NUM_VARS, NUM_CLAUSES);
+    read_clause_file(fileName, c1, c2, c3, max_size, NUM_VARS, NUM_ORG_CLAUSES);
     cout << "Max Number of cls for the same variable is " << max_size[0]<<endl;
     // cout << "Clause :"<< c1[0] << " " << c2[0]<< " " <<c3[0] << endl; 
     auto ts2 = std::chrono::high_resolution_clock::now();
