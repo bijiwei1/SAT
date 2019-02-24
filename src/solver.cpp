@@ -32,7 +32,7 @@ void solver_kernel(
   int satisfiable; 
   int unsatisfiable = 0; 
   //Table and buffers
-  int local_clauses[NUM_TOTAL_CLAUSES][3];
+  int local_clauses[NUM_TOT_CLAUSES][3];
 
   char var_truth_table[NUM_VARS] = {U}; // T, F, U (Undef), TF(assigned to T first), FT(assigned to F first)
   int dec_lvl[NUM_VARS] = {-1};
@@ -90,10 +90,10 @@ void solver_kernel(
   int poss_learn_cls[3]; 
   bool issameparent; 
   bool islearned; 
-  int lit_learned; 
 */
 
   int learn_cls_nxtidx= NUM_ORG_CLAUSES;
+  int learned_lit[3]; 
 
 /*************************** Initializing array ***************************/
 
@@ -118,7 +118,7 @@ void solver_kernel(
     collect_buffer(pos_cls, neg_cls, c3[x], x, extra_cls, extra_lit, num_extra);
   }
 /*
-for (int x = 0; x < NUM_CLAUSES; x++){
+for (int x = 0; x < NUM_ORG_CLAUSES; x++){
     printf("%d %d %d\n", local_clauses[x][0], local_clauses[x][1], local_clauses[x][2]);
   } 
   for (int x = 1; x < NUM_VARS; x++){
@@ -187,8 +187,8 @@ for (int x = 0; x < NUM_CLAUSES; x++){
           prop_var = new_var_idx;
         }else if (prev_state == DEDUCTION){
           prop_var = abs(buf_ded[buf_ded_curr]);
-        }else if (prev_state == BACKTRACK){
-          //prop_var = abs(lit_learned);
+        }else if (prev_state == BACKTRACK_DED){
+          prop_var = abs(lit_learned);
         }
         //printf("Prop ded Var(%d): %d\n", prop_var, var_truth_table[prop_var]);
 
@@ -353,12 +353,12 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         //debug
         if(conf_parents[0] == conf_parents[1]){printf("Error: Same conf_parent\n"); state = FAILED; break;}
        
+        //Learning 
         if (dec_lvl[conf_parents[1]] < curr_lvl){
-          int c1 = conf_parents[2];
-          int c2 = conf_parents[3];  
+          if (abs(conf_parents[2]) == dec_var[curr_lvl] && abs(conf_parents[3]) == dec_var[curr_lvl]){
 
-          //Add learning clause
-          if (c1 == dec_var[curr_lvl] && c2 == dec_var[curr_lvl]){
+	  }
+
             printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, conf_parents[0], conf_parents[1], conf_parents[2]);
             local_clauses[learn_cls_nxtidx][0] = conf_parents[0];
             local_clauses[learn_cls_nxtidx][1] = conf_parents[1];
@@ -380,11 +380,12 @@ for (int x = 0; x < NUM_CLAUSES; x++){
                 }
                 printf("Error: not enough neg cls buf\n"); state = FAILED; break; 
               }
+		}
             
             back_lvl = dec_lvl[conf_parents[1]]; 
-            state = BACKTRACK; break; 
+            state = BACKTRACK_DED; break; 
           }
-        }
+        }//End of Learning part
 
         sort4(conf_lst_lvl);
         curr_lst = (conf_lst_lvl[3] != curr_lvl) ? conf_lst_lvl[3]: (conf_lst_lvl[2] != curr_lvl) ? conf_lst_lvl[2] : conf_lst_lvl[1]; 
@@ -462,9 +463,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         break;
 
       case BACKTRACK_DED:
-        //printf("State = BACKTRACK_DED; ");
         prev_state = BACKTRACK_DED;
-
         printf("Back to learn lvl %d\n", back_lvl);
 
         //printf("Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
@@ -486,6 +485,7 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         }
 
         new_var_idx = dec_var[back_lvl]; 
+	lit_learned = local_clauses[learn_cls_nxtidx][2];
         var_truth_table[abs(lit_learned)] = lit_learned > 0 ? T : F; 
         dec_lvl[abs(lit_learned)] = back_lvl;
         parent_cls[abs(lit_learned)] = learn_cls_nxtidx;
@@ -497,12 +497,11 @@ for (int x = 0; x < NUM_CLAUSES; x++){
         state = PROP; 
         break; 
 
-
       case SOLVED:
         printf("Solved\n");
         tot_conflict = 0;
         #pragma ACCEL parallel flatten reduction=tot_conflict
-        for (int x = 0; x < NUM_CLAUSES; x++){
+        for (int x = 0; x < NUM_ORG_CLAUSES; x++){
           int l1_tmp = local_clauses[x][0];
           int l2_tmp = local_clauses[x][1];
           int l3_tmp = local_clauses[x][2];
