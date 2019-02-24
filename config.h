@@ -5,10 +5,10 @@
 
 #define NUM_VARS 251
 
-#define BUF_CLS_SIZE 22
-#define BUF_CLS_END 21 // BUF_CLS_SIZE -1 
+#define BUF_CLS_SIZE 25
+#define BUF_CLS_END 24 // BUF_CLS_SIZE -1 
 #define extra_buf_size 10
-#define BUF_DED_SIZE 250
+#define BUF_DED_SIZE 200
 #define BUF_DEC_LVL 100
 
 
