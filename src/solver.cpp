@@ -355,36 +355,41 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
        
         //Learning 
         if (dec_lvl[conf_parents[1]] < curr_lvl){
-          if (abs(conf_parents[2]) == dec_var[curr_lvl] && abs(conf_parents[3]) == dec_var[curr_lvl]){
-
-	  }
-
-            printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, conf_parents[0], conf_parents[1], conf_parents[2]);
-            local_clauses[learn_cls_nxtidx][0] = conf_parents[0];
-            local_clauses[learn_cls_nxtidx][1] = conf_parents[1];
-            local_clauses[learn_cls_nxtidx][2] = conf_parents[2];
-            #pragma ACCEL parallel flatten
-            for (int j = 0; j < 3; j++){
-              if (conf_parents[j] > 0){
-                for (int i = BUF_CLS_END; i >= 0; i --){
-                  if(pos_cls[conf_parents[j]][i] == EMPTY){
-                    pos_cls[conf_parents[j]][i] = learn_cls_nxtidx; break;
-                  }
-                }
-                printf("Error: not enough neg cls buf\n"); state = FAILED; break; 
-              }else {
-                for (int i = BUF_CLS_END; i >= 0; i --){
-                  if(neg_cls[-conf_parents[j]][i] == EMPTY){
-                    neg_cls[-conf_parents[j]][i] = learn_cls_nxtidx; break;
-                  }
-                }
-                printf("Error: not enough neg cls buf\n"); state = FAILED; break; 
-              }
-		}
-            
-            back_lvl = dec_lvl[conf_parents[1]]; 
-            state = BACKTRACK_DED; break; 
+          if (conf_parents[0] == conf_parents[1]){
+            learned_lit[0] = conf_parents[0]; 
+            learned_lit[1] = conf_parents[2];
+            learned_lit[2] = conf_parents[3];
+          }else if (conf_parents[2] == conf_parents[3]){
+            learned_lit[0] = conf_parents[0]; 
+            learned_lit[1] = conf_parents[1];
+            learned_lit[2] = conf_parents[2];
           }
+
+          printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
+          local_clauses[learn_cls_nxtidx][0] = learned_lit[0];
+          local_clauses[learn_cls_nxtidx][1] = learned_lit[1];
+          local_clauses[learn_cls_nxtidx][2] = learned_lit[2];
+          #pragma ACCEL parallel flatten
+          for (int j = 0; j < 3; j++){
+            if (learned_lit[j] > 0){
+              for (int i = BUF_CLS_END; i >= 0; i --){
+                if(pos_cls[learned_lit[j]][i] == EMPTY){
+                  pos_cls[learned_lit[j]][i] = learn_cls_nxtidx; break;
+                }
+              }
+              printf("Error: not enough neg cls buf\n"); state = FAILED; break; 
+            }else {
+              for (int i = BUF_CLS_END; i >= 0; i --){
+                if(neg_cls[-learned_lit[j]][i] == EMPTY){
+                  neg_cls[-learned_lit[j]][i] = learn_cls_nxtidx; break;
+                }
+              }
+               printf("Error: not enough neg cls buf\n"); state = FAILED; break; 
+            }
+		      }
+        
+          back_lvl = dec_lvl[learned_lit[1]]; 
+          state = BACKTRACK_DED; break; 
         }//End of Learning part
 
         sort4(conf_lst_lvl);
@@ -485,12 +490,11 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         }
 
         new_var_idx = dec_var[back_lvl]; 
-	lit_learned = local_clauses[learn_cls_nxtidx][2];
-        var_truth_table[abs(lit_learned)] = lit_learned > 0 ? T : F; 
-        dec_lvl[abs(lit_learned)] = back_lvl;
-        parent_cls[abs(lit_learned)] = learn_cls_nxtidx;
+        var_truth_table[abs(lit_learned[2])] = lit_learned[2] > 0 ? T : F; 
+        dec_lvl[abs(lit_learned[2])] = back_lvl;
+        parent_cls[abs(lit_learned[2])] = learn_cls_nxtidx;
         learn_cls_nxtidx ++; 
-        least_parent[abs(lit_learned)] = conf_parents[0];  // To the other variable 
+        least_parent[abs(lit_learned[2])] = lit_learned[0];  // To the other variable 
         //printf("Change VTT Var(%d) to %d\n", dec_var[back_lvl], var_truth_table[dec_var[back_lvl]]);
         curr_lvl = back_lvl;
 
