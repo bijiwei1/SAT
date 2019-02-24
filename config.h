@@ -1,12 +1,14 @@
 #define NUM_TEST 10
 
-#define NUM_CLAUSES 1024
+#define NUM_TOT_CLAUSES 1200
+
+#define NUM_ORG_CLAUSES 1024
 #define NUM_VARS 251
 
 #define BUF_CLS_SIZE 22
+#define BUF_CLS_END 21 // BUF_CLS_SIZE -1 
 #define extra_buf_size 10
 #define BUF_DED_SIZE 250
-#define LEARN_TABLE_SIZE 100
 #define BUF_DEC_LVL 100
 
 
@@ -21,10 +23,10 @@
 #define PROP 2
 #define DEDUCTION 3
 #define ANALYSIS 4
-#define BACKTRACK 5
-#define FAILED 6
-#define EXIT 7
-#define BACKTRACK_DEC 8
+#define FAILED 5
+#define EXIT 6
+#define BACKTRACK_DEC 7
+#define BACKTRACK_DED 8
 
 #define EMPTY -1
 
