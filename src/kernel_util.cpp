@@ -43,17 +43,32 @@ int collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BU
   return num_extra;
 }
 
-bool deduction(int l1, int l2, char *var_truth_table, int x, int *l_ded){
+bool deduction(int l1, int l2, int var1, int var2, int x, int *l_ded){
+  //printf("Deduction: l1 - %d, l2 - %d\n", l1, l2); 
+  bool conflict = 0; 
+  bool unsat1 = (l1 > 0) ? (var1 == F || var1 ==TF) : (var1 == T || var1 ==FT);
+  bool unsat2 = (l2 > 0) ? (var2 == F || var2 ==TF) : (var2 == T || var2 ==FT);
+
+  conflict = unsat1 & unsat2; 
+
+  l_ded[x] = (unsat1 && (var2 == U))? l2 : (unsat2 && (var1 == U))? l1 : 0; 
+
+  return conflict; 
+}
+
+bool deduction4(int l1, int l2, int l3, int var1, int var2, int var3, int x, int *l_ded){
   //printf("Deduction: l1 - %d, l2 - %d\n", l1, l2); 
   bool conflict = 0; 
   bool unsat1 = (l1 > 0) ? (var_truth_table[l1]==F || var_truth_table[l1]==TF) :
                            (var_truth_table[-l1]==T || var_truth_table[-l1]==FT);
   bool unsat2 = (l2 > 0) ? (var_truth_table[l2]==F || var_truth_table[l2]==TF) : 
                            (var_truth_table[-l2]==T || var_truth_table[-l2]==FT);
+  bool unsat3 = (l3 > 0) ? (var_truth_table[l3]==F || var_truth_table[l3]==TF) : 
+                           (var_truth_table[-l3]==T || var_truth_table[-l3]==FT);
 
-  conflict = unsat1 & unsat2; 
+  conflict = unsat1 & unsat2 & unsat3; 
 
-  l_ded[x] = (unsat1 && var_truth_table[abs(l2)]==U)? l2 : (unsat2 && var_truth_table[abs(l1)]==U)? l1 : 0; 
+  l_ded[x] = (unsat1 && unsat2 && (var3==U))? l3 : (unsat1 && unsat3 && (var2==U))? l2 : (unsat2 && unsat3 && (var1==U))? l1; 
 
   return conflict; 
 }

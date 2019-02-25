@@ -14,7 +14,7 @@ int collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BU
   int *extra_cls,
   int num_extra);
 
-bool deduction(int l1, int l2, char *var_truth_table, int x, int *l_ded);
+bool deduction(int l1, int l2, int var1, int var2,, int x, int *l_ded);
 
 void sort4 (int array[4]); 
 
@@ -32,8 +32,8 @@ void solver_kernel(
   int satisfiable; 
   int unsatisfiable = 0; 
   //Table and buffers
-  int local_clauses[NUM_TOT_CLAUSES][3];
-  int conflict_table[NUM_];
+  //int local_clauses[NUM_TOT_CLAUSES][3];
+  int local_clauses[NUM_TOT_CLAUSES][4];
 
   char var_truth_table[NUM_VARS] = {U}; // T, F, U (Undef), TF(assigned to T first), FT(assigned to F first)
   int dec_lvl[NUM_VARS] = {-1};
@@ -55,6 +55,8 @@ void solver_kernel(
 
   int pos_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
   int neg_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
+  int pos_cls_end;
+  int neg_cls_end;
   int extra_cls[extra_buf_size] = {0};  
   int num_extra = 0;
 
@@ -108,6 +110,18 @@ void solver_kernel(
     num_extra = collect_buffer(pos_cls, neg_cls, c1[x], x, extra_cls, num_extra);
     num_extra = collect_buffer(pos_cls, neg_cls, c2[x], x, extra_cls, num_extra);
     num_extra = collect_buffer(pos_cls, neg_cls, c3[x], x, extra_cls, num_extra);
+  }
+
+  for (int x = 0; x < NUM_VARS; x++){
+    for (int y = 0; y < BUF_CLS_SIZE; y++){
+      if (pos_cls[x] == EMPTY){ break ;}
+    }
+    pos_cls_end = y;
+
+    for (int y = 0; y < BUF_CLS_SIZE; y++){
+      if (neg_cls[x] == EMPTY){ break ;}
+    }
+    neg_cls_end = y;
   }
 /*
 for (int x = 0; x < NUM_ORG_CLAUSES; x++){
@@ -187,22 +201,42 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         /****************** pos_buf & neg_buf *****************/
         #pragma ACCEL parallel flatten
         for (int x = 0; x < BUF_CLS_SIZE; x++){
-          int l1, l2; 
+          int l1, l2, l3, var1, var2, var3; 
           if( (var_truth_table[prop_var] == T || var_truth_table[prop_var] == FT) && neg_cls[prop_var][x] != EMPTY){
             l1 = (local_clauses[neg_cls[prop_var][x]][0] == -prop_var)? 
               local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][0];
-            l2 = (local_clauses[neg_cls[prop_var][x]][2] == -prop_var)? 
+            l2 = (local_clauses[neg_cls[prop_var][x]][2] == -prop_var || local_clauses[neg_cls[prop_var][x]][3] == -prop_var )? 
               local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][2];
-            conflict[x] = deduction(l1, l2, var_truth_table, x, l_ded);
-            cls_ded[x] = neg_cls[prop_var][x];
+            var1 = var_truth_table[abs(l1)];
+            var2 = var_truth_table[abs(l2)]; 
+            if (neg_cls[prop_var][x] > NUM_ORG_CLAUSES){
+              l3 = (local_clauses[neg_cls[prop_var][x]][3] == -prop_var)? 
+              local_clauses[neg_cls[prop_var][x]][2] : local_clauses[neg_cls[prop_var][x]][3]; 
+              var3 = var_truth_table[abs(l3)];  
+              conflict[x] = deduction4(l1, l2, l3, var1, var2, var3, x, l_ded);
+              cls_ded[x] = neg_cls[prop_var][x];
+            }else {
+              conflict[x] = deduction(l1, l2, var1, var2, x, l_ded);
+              cls_ded[x] = neg_cls[prop_var][x];
+            }
             //if (conflict[x]){ printf("Found conflict @cls(%d)\n", neg_cls[prop_var][x]);}
           }else if ((var_truth_table[prop_var] == F  || var_truth_table[prop_var] == TF) && pos_cls[prop_var][x] != EMPTY){
             l1 = (local_clauses[pos_cls[prop_var][x]][0] == prop_var)? 
               local_clauses[pos_cls[prop_var][x]][1] : local_clauses[pos_cls[prop_var][x]][0];
-            l2 = (local_clauses[pos_cls[prop_var][x]][2] == prop_var)? 
+            l2 = (local_clauses[pos_cls[prop_var][x]][2] == prop_var || local_clauses[pos_cls[prop_var][x]][3] == prop_var)? 
               local_clauses[pos_cls[prop_var][x]][1] : local_clauses[pos_cls[prop_var][x]][2];
-            conflict[x] = deduction(l1, l2, var_truth_table, x, l_ded);
-            cls_ded[x] = pos_cls[prop_var][x];
+            var1 = var_truth_table[abs(l1)];
+            var2 = var_truth_table[abs(l2)]; 
+            if (pos_cls[prop_var][x] > NUM_ORG_CLAUSES){
+              l3 = (local_clauses[pos_cls[prop_var][x]][3] == prop_var)? 
+              local_clauses[pos_cls[prop_var][x]][2] : local_clauses[pos_cls[prop_var][x]][3]; 
+              var3 = var_truth_table[abs(l3)];  
+              conflict[x] = deduction4(l1, l2, l3, var1, var2, var3, x, l_ded);
+              cls_ded[x] = pos_cls[prop_var][x];
+            }else {
+              conflict[x] = deduction(l1, l2, var1, var2, x, l_ded);
+              cls_ded[x] = pos_cls[prop_var][x];
+            }
             //if (conflict[x]){ printf("Found conflict @cls(%d)\n", pos_cls[prop_var][x]);}
           }else {
             conflict[x] = 0;
@@ -394,15 +428,17 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
 
         //printf("Original Parents var(lvl) %d(%d) %d(%d) %d(%d) %d(%d) \n", conf_parents[0], parent_lvl_tmp[0], conf_parents[1], parent_lvl_tmp[1], 
         //        conf_parents[2], parent_lvl_tmp[2], conf_parents[3], parent_lvl_tmp[3]);
-
+        
         int sorted_idx[4]; 
         sort4_idx(parent_lvl_tmp, sorted_idx); 
+
         #pragma ACCEL parallel flatten
         for (int i = 0; i < 4; i++){
           conf_parents[i] = conf_parent_tmp[sorted_idx[i]];
           parent_lvl[i] = parent_lvl_tmp[sorted_idx[i]]; 
           conf_lst_lvl[i] = lst_tmp[sorted_idx[i]]; 
         }
+
 
 /*	
         printf("Analysis Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
@@ -419,74 +455,85 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         }
 
         //Learning 
-        if (dec_lvl[abs(conf_parents[1])] < curr_lvl){
-	  if (conf_parents[2] == conf_parents[3]){
-            learned_lit[0] = conf_parents[0]; 
-            learned_lit[1] = conf_parents[1];
-            learned_lit[2] = conf_parents[2];
-          }else {
-            learned_lit[0] = 0; 
-	  }
+        printf("Add learn cls(%d) %d %d %d\n", conf_parents[0], conf_parents[1], conf_parents[2], conf_parents[3]);
+        local_clauses[learn_cls_nxtidx][0] = conf_parents[0];
+        local_clauses[learn_cls_nxtidx][1] = conf_parents[1];
+        local_clauses[learn_cls_nxtidx][2] = conf_parents[2];
+        local_clauses[learn_cls_nxtidx][3] = conf_parents[3]; 
 
-	  if (learned_lit[0] != 0){ 
-            printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
-            local_clauses[learn_cls_nxtidx][0] = learned_lit[0];
-            local_clauses[learn_cls_nxtidx][1] = learned_lit[1];
-            local_clauses[learn_cls_nxtidx][2] = learned_lit[2];
+        //parent 0 
+        if (conf_parents[0] > 0){
+          if (pos_cls_end[conf_parents[0]] < BUF_CLS_SIZE){
+            pos_cls[conf_parents[0]][pos_cls_end[conf_parents[0]]] = learn_cls_nxtidx;
+            pos_cls_end[conf_parents[0]] ++; 
+          }else{
+            printf("Not enough pos cls buffer\n");
+          } 
+        }else{
+          if (neg_cls_end[-conf_parents[0]] < BUF_CLS_SIZE){
+            neg_cls[-conf_parents[0]][neg_cls_end[-conf_parents[0]]] = learn_cls_nxtidx;
+            neg_cls_end[-conf_parents[0]] ++; 
+          }else{
+            printf("Not enough neg cls buffer\n");
+          } 
+        }
 
-            for (int j = 0; j < 3; j++){
-			found = 0;
-              if (learned_lit[j] > 0){
-                for (int i = BUF_CLS_END; i >= 0; i --){
-                  if(pos_cls[learned_lit[j]][i] == EMPTY){
-			found = 1; 
-                    pos_cls[learned_lit[j]][i] = learn_cls_nxtidx; break;
-                  }
-                }
-                if (!found){
-/*
-		  extra_cls[num_extra] = learn_cls_nxtidx;
-		  num_extra ++;
-        printf("Analysis Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
-        printf("Parents var(lvl) %d(%d) %d(%d) %d(%d) %d(%d) \n", conf_parents[0], parent_lvl[0], conf_parents[1], parent_lvl[1], 
-                conf_parents[2], parent_lvl[2], conf_parents[3], parent_lvl[3]);
-        printf("Lst back var(lvl) %d(%d) %d(%d) %d(%d) %d(%d)\n ", least_parent[abs(conf_parents[0])], conf_lst_lvl[0],
-		        least_parent[abs(conf_parents[1])], conf_lst_lvl[1],
-		        least_parent[abs(conf_parents[2])], conf_lst_lvl[2],
-		        least_parent[abs(conf_parents[3])], conf_lst_lvl[3]);
-            printf("Add extra learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
-*/ 	printf("Error\n");
-		}
-              }else {
-                for (int i = BUF_CLS_END; i >= 0; i --){
-                  if(neg_cls[-learned_lit[j]][i] == EMPTY){
-			found = 1; 
-                    neg_cls[-learned_lit[j]][i] = learn_cls_nxtidx; break;
-                  }
-                }
-                if (!found){
-/*
-		  extra_cls[num_extra] = learn_cls_nxtidx;
-		  num_extra ++;
-        printf("Analysis Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
-        printf("Parents var(lvl) %d(%d) %d(%d) %d(%d) %d(%d) \n", conf_parents[0], parent_lvl[0], conf_parents[1], parent_lvl[1], 
-                conf_parents[2], parent_lvl[2], conf_parents[3], parent_lvl[3]);
-        printf("Lst back var(lvl) %d(%d) %d(%d) %d(%d) %d(%d)\n ", least_parent[abs(conf_parents[0])], conf_lst_lvl[0],
-		        least_parent[abs(conf_parents[1])], conf_lst_lvl[1],
-		        least_parent[abs(conf_parents[2])], conf_lst_lvl[2],
-		        least_parent[abs(conf_parents[3])], conf_lst_lvl[3]);
-            printf("Add extra learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
-*/ 	printf("Error\n");
-		}
-              }
-	    }
-            back_lvl = dec_lvl[abs(learned_lit[1])]; 
-	    state = BACKTRACK_DED;
-	  }
-        
-        }//End of Learning part
+        //parent 1
+        if ((conf_parents[1] != conf_parents[0]) && (conf_parents[1] > 0)){
+          if (pos_cls_end[conf_parents[1]] < BUF_CLS_SIZE){
+            pos_cls[conf_parents[1]][pos_cls_end[conf_parents[1]]] = learn_cls_nxtidx;
+            pos_cls_end[conf_parents[1]] ++; 
+          }else{
+            printf("Not enough pos cls buffer\n");
+          }
+        }else if ((conf_parents[1] != conf_parents[0]) && (conf_parents[1] < 0)){
+          if (neg_cls_end[-conf_parents[1]] < BUF_CLS_SIZE){
+            neg_cls[-conf_parents[1]][neg_cls_end[-conf_parents[1]]] = learn_cls_nxtidx;
+            neg_cls_end[-conf_parents[1]] ++; 
+          }else{
+            printf("Not enough neg cls buffer\n");
+          }
+        }
 
-	if (state == FAILED || state == BACKTRACK_DED){break;}
+        //parent 2 
+        if (conf_parents[2] > 0){
+          if (pos_cls_end[conf_parents[2]] < BUF_CLS_SIZE){
+            pos_cls[conf_parents[2]][pos_cls_end[conf_parents[2]]] = learn_cls_nxtidx;
+            pos_cls_end[conf_parents[2]] ++; 
+          }else{
+            printf("Not enough pos cls buffer\n");
+          } 
+        }else{
+          if (neg_cls_end[-conf_parents[2]] < BUF_CLS_SIZE){
+            neg_cls[-conf_parents[2]][neg_cls_end[-conf_parents[2]]] = learn_cls_nxtidx;
+            neg_cls_end[-conf_parents[2]] ++; 
+          }else{
+            printf("Not enough neg cls buffer\n");
+          } 
+        }
+
+        //parent 3
+        if ((conf_parents[3] != conf_parents[2]) && (conf_parents[3] > 0)){
+          if (pos_cls_end[conf_parents[3]] < BUF_CLS_SIZE){
+            pos_cls[conf_parents[3]][pos_cls_end[conf_parents[3]]] = learn_cls_nxtidx;
+            pos_cls_end[conf_parents[3]] ++; 
+          }else{
+            printf("Not enough pos cls buffer\n");
+          }
+        }else if ((conf_parents[3] != conf_parents[2]) && (conf_parents[3] < 0)){
+          if (neg_cls_end[-conf_parents[3]] < BUF_CLS_SIZE){
+            neg_cls[-conf_parents[3]][neg_cls_end[-conf_parents[3]]] = learn_cls_nxtidx;
+            neg_cls_end[-conf_parents[3]] ++; 
+          }else{
+            printf("Not enough neg cls buffer\n");
+          }
+        }else {
+          back_lvl = dec_lvl[abs(learned_lit[1])]; 
+          state = BACKTRACK_DED;
+          break; 
+        }
+        learn_cls_nxtidx ++; 
+        //End of Learning part
 
         sort4(conf_lst_lvl);
         curr_lst = (conf_lst_lvl[3] != curr_lvl) ? conf_lst_lvl[3]: (conf_lst_lvl[2] != curr_lvl) ? conf_lst_lvl[2] : conf_lst_lvl[1]; 
@@ -497,7 +544,7 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         }else{
           int curr_var = dec_var[curr_lvl];
           dec_lst_lvl[curr_lvl] = curr_lst;
-	  back_lvl = curr_lvl;
+          back_lvl = curr_lvl;
           //For debug
           if (curr_lst == curr_lvl){printf("Error: lst parent is current lvl\n"); state = EXIT;}
         }
