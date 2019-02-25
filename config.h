@@ -1,15 +1,16 @@
 #define NUM_TEST 10
 
 #define NUM_TOT_CLAUSES 1200
-#define NUM_ORG_CLAUSES 1024
-
+#define NUM_ORG_CLAUSES 1065
 #define NUM_VARS 251
 
-#define BUF_CLS_SIZE 25
+#define BUF_CLS_SIZE 28
 #define BUF_CLS_END 24 // BUF_CLS_SIZE -1 
-#define extra_buf_size 10
+#define extra_buf_size 20
 #define BUF_DED_SIZE 200
 #define BUF_DEC_LVL 100
+
+#define LEARN_TABLE_SIZE 100
 
 
 #define TF 4

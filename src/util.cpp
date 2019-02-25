@@ -61,22 +61,6 @@ void read_clause_file(string filename, int *c1, int *c2, int *c3, int *max_size,
       l1 = stoi(substrs.at(0));
       l2 = stoi(substrs.at(1));
       l3 = stoi(substrs.at(2));
-      /*
-      if (l1 < 0){
-        c1_local[cnt] = l1;
-      }else{
-        c1_local[cnt] = l1;
-      }
-      if (l2 < 0){
-        c2_local[cnt] = l2;
-      }else{
-        c2_local[cnt] = l2;
-      }
-      if (l3 < 0){
-        c3_local[cnt] = l3; 
-      }else{
-        c3_local[cnt] = l3;
-      }*/
       c1_local[cnt] = l1;
       c2_local[cnt] = l2;
       c3_local[cnt] = l3;
