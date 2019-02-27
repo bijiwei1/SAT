@@ -5,10 +5,8 @@
 #include <stdio.h>
 
 #include <config.h>
-int collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
-  int lit, int x, 
-  int *extra_cls, 
-  int num_extra){
+bool collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
+  int lit, int x){
    
   int i = 0; 
   if (lit > 0){
@@ -20,8 +18,7 @@ int collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BU
       }
     }
     if (i>=BUF_CLS_SIZE){
-      extra_cls[num_extra]= x; 
-      num_extra ++; 
+      return 1; 
     }else {
       pos_cls[lit][i] = x; 
     }
@@ -34,13 +31,12 @@ int collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BU
       }
     }
     if (i>=BUF_CLS_SIZE){
-      extra_cls[num_extra]= x; 
-      num_extra ++; 
+      return 1; 
     }else {
       neg_cls[-lit][i] = x; 
     }
   }
-  return num_extra;
+  return 0; 
 }
 
 bool deduction(int l1, int l2, int var1, int var2, int x, int *l_ded){

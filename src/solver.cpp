@@ -9,10 +9,8 @@
 //using namespace std; 
 
 
-void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
-  int lit, int x, 
-  int *extra_cls, int *extra_lit, 
-  int* num_extra);
+bool collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
+  int lit, int x);
 
 bool deduction(int l1, int l2, int var1, int var2, int x, int *l_ded);
 bool deduction4(int l1, int l2, int l3, int var1, int var2, int var3, int x, int *l_ded);
@@ -34,6 +32,8 @@ void solver_kernel(
   int unsatisfiable = 0; 
   //Table and buffers
   int local_clauses[NUM_TOT_CLAUSES][3];
+  int conf_table[2000][4] ={-1};
+  int conf_table_nxtidx = 0; 
 
   char var_truth_table[NUM_VARS] = {U}; // T, F, U (Undef), TF(assigned to T first), FT(assigned to F first)
   int dec_lvl[NUM_VARS] = {-1};
@@ -45,7 +45,6 @@ void solver_kernel(
   int least_parent[NUM_VARS] = {-1};
   int dec_lst_lvl[BUF_DEC_LVL] = {-1}; 
 
-
   int l_ded[BUF_CLS_SIZE];
   int cls_ded[BUF_CLS_SIZE]; 
   bool conflict[BUF_CLS_SIZE];
@@ -54,8 +53,6 @@ void solver_kernel(
   int neg_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
   int pos_cls_end[NUM_VARS];
   int neg_cls_end[NUM_VARS];
-  int extra_cls[extra_buf_size] = {0}; 
-  int extra_lit[extra_buf_size] = {0}; 
 
   //Idx and ptr 
   int new_var_idx = 1;
@@ -66,7 +63,7 @@ void solver_kernel(
   //Other global variables
   int state = DECISION; 
   int prev_state = DECISION; 
-  int num_extra[1] = {0};
+  int num_extra;
   int conf_var; 
   int conf_cls; 
   int conf_parents[4]; 
@@ -90,7 +87,7 @@ void solver_kernel(
 /*************************** Initializing array ***************************/
 
 //#pragma ACCEL parallel flatten
-  for (int x = 1; x< NUM_VARS; x++){
+  for (int x = 0; x< NUM_VARS; x++){
     for (int y = 0; y< BUF_CLS_SIZE; y++){
       pos_cls[x][y] = EMPTY; 
       neg_cls[x][y] = EMPTY; 
@@ -105,51 +102,40 @@ void solver_kernel(
     local_clauses[x][1] = c2[x];
     local_clauses[x][2] = c3[x];
 
-    num_extra = collect_buffer(pos_cls, neg_cls, c1[x], x, extra_cls, num_extra);
-    num_extra = collect_buffer(pos_cls, neg_cls, c2[x], x, extra_cls, num_extra);
-    num_extra = collect_buffer(pos_cls, neg_cls, c3[x], x, extra_cls, num_extra);
+    collect_buffer(pos_cls, neg_cls, c1[x], x);
+    collect_buffer(pos_cls, neg_cls, c2[x], x);
+    collect_buffer(pos_cls, neg_cls, c3[x], x);
   }
 
   for (int x = 0; x < NUM_VARS; x++){
     for (int y = 0; y < BUF_CLS_SIZE; y++){
       if (pos_cls[x][y] == EMPTY){
-        pos_cls_end[x] = y; 
-        break ;}
+        pos_cls_end[x] = y; break;
       }
+    }
 
     for (int y = 0; y < BUF_CLS_SIZE; y++){
       if (neg_cls[x][y] == EMPTY){
-        neg_cls_end[x] = y; 
-        break ;}
+        neg_cls_end[x] = y; break;
       }
+    }
   }
 
-/*
-for (int x = 0; x < NUM_ORG_CLAUSES; x++){
-    printf("%d %d %d\n", local_clauses[x][0], local_clauses[x][1], local_clauses[x][2]);
-  } 
-  for (int x = 1; x < NUM_VARS; x++){
-    printf("Pos var(%d): %d %d %d %d %d %d %d %d %d %d\n", x, 
-      pos_cls[x][0], pos_cls[x][1], pos_cls[x][2], pos_cls[x][3], pos_cls[x][4], 
-      pos_cls[x][5], pos_cls[x][6], pos_cls[x][7], pos_cls[x][8], pos_cls[x][9]); 
-    printf("Neg var(%d): %d %d %d %d %d %d %d %d %d %d\n", x, 
-      neg_cls[x][0], neg_cls[x][1], neg_cls[x][2], neg_cls[x][3], neg_cls[x][4], 
-      neg_cls[x][5], neg_cls[x][6], neg_cls[x][7], neg_cls[x][8], neg_cls[x][9]);
-  } 
-  printf("Extra cls buffer size : %d < %d\n", num_extra[0], extra_buf_size);
-  for (int x = 0; x < num_extra[0]; x++){
-    printf("Extra var(%d) at cls(%d) \n", extra_lit[x], extra_cls[x]);
+  for (int x = 0; x < NUM_VARS; x++){
+    printf("Pos buf Var(%d): ", x);
+    for (int y = 0; y < BUF_CLS_SIZE; y++){
+      printf("%d ", pos_cls[x][y]);
+    }
+    printf("\nEnd ptr is %d\n", pos_cls_end[x]);
+
+    printf("Neg buf Var(%d): ", x);
+    for (int y = 0; y < BUF_CLS_SIZE; y++){
+      printf("%d ", neg_cls[x][y]);
+    }
+    printf("\nEnd ptr is %d\n", neg_cls_end[x]);
+    
   }
-  for (int x = 1; x < NUM_VARS; x++){
-    printf("Pos var(%d): %d %d %d %d %d %d %d %d %d %d\n", x, 
-      pos_cls[x][0], pos_cls[x][2], pos_cls[x][4], pos_cls[x][6], pos_cls[x][8], 
-      pos_cls[x][10], pos_cls[x][12], pos_cls[x][14], pos_cls[x][16], pos_cls[x][20]); 
-    printf("Neg var(%d): %d %d %d %d %d %d %d %d %d %d\n", x, 
-      neg_cls[x][0], neg_cls[x][2], neg_cls[x][4], neg_cls[x][6], neg_cls[x][8], 
-      neg_cls[x][10], neg_cls[x][12], neg_cls[x][14], neg_cls[x][16], neg_cls[x][20]);
-  } 
-  */
-  printf("Extra cls buffer size : %d < %d\n", num_extra[0], extra_buf_size);
+
   for (int x = 0; x< NUM_VARS; x++){
      var_truth_table[x] = U; 
   }
@@ -174,6 +160,15 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
           state = PROP;
           curr_lvl ++; 
 //        printf("Decide Var(%d) - at lvl %d\n", new_var_idx, curr_lvl);
+
+	  var_truth_table[new_var_idx] = T;
+
+/*
+          #pragma ACCEL parallel flatten reduction=tot_conflict
+          for (int x = 0; x < NUM_ORG_CLAUSES; x++){
+
+          }
+ */
 
           if (pos_cls[new_var_idx][5] != -1){
             var_truth_table[new_var_idx] = T;
@@ -202,13 +197,15 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         /****************** pos_buf & neg_buf *****************/
         #pragma ACCEL parallel flatten
         for (int x = 0; x < BUF_CLS_SIZE; x++){
-          int l1, l2; 
+          int l1, l2, var1, var2;
           if( (var_truth_table[prop_var] == T || var_truth_table[prop_var] == FT) && neg_cls[prop_var][x] != EMPTY){
             l1 = (local_clauses[neg_cls[prop_var][x]][0] == -prop_var)? 
               local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][0];
             l2 = (local_clauses[neg_cls[prop_var][x]][2] == -prop_var)? 
               local_clauses[neg_cls[prop_var][x]][1] : local_clauses[neg_cls[prop_var][x]][2];
-            conflict[x] = deduction(l1, l2, var_truth_table, x, l_ded);
+            var1 = var_truth_table[abs(l1)];
+            var2 = var_truth_table[abs(l2)];
+            conflict[x] = deduction(l1, l2, var1, var2, x, l_ded);
             cls_ded[x] = neg_cls[prop_var][x];
             //if (conflict[x]){ printf("Found conflict @cls(%d)\n", neg_cls[prop_var][x]);}
           }else if ((var_truth_table[prop_var] == F  || var_truth_table[prop_var] == TF) && pos_cls[prop_var][x] != EMPTY){
@@ -216,7 +213,9 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
               local_clauses[pos_cls[prop_var][x]][1] : local_clauses[pos_cls[prop_var][x]][0];
             l2 = (local_clauses[pos_cls[prop_var][x]][2] == prop_var)? 
               local_clauses[pos_cls[prop_var][x]][1] : local_clauses[pos_cls[prop_var][x]][2];
-            conflict[x] = deduction(l1, l2, var_truth_table, x, l_ded);
+            var1 = var_truth_table[abs(l1)];
+            var2 = var_truth_table[abs(l2)];
+            conflict[x] = deduction(l1, l2, var1, var2, x, l_ded);
             cls_ded[x] = pos_cls[prop_var][x];
             //if (conflict[x]){ printf("Found conflict @cls(%d)\n", pos_cls[prop_var][x]);}
           }else {
@@ -246,7 +245,7 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
               buf_ded_end ++;
               buf_ded[buf_ded_end] = l_ded[x]; 
               buf_ded_cls[buf_ded_end] = cls_ded[x]; 
-        int tmp1 = local_clauses[cls_ded[x]][0];
+              int tmp1 = local_clauses[cls_ded[x]][0];
               int tmp2 = local_clauses[cls_ded[x]][1];
               int tmp3 = local_clauses[cls_ded[x]][2];
               //Change ded value here
@@ -262,11 +261,12 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
               //  printf("lstparent: %d\n", least_parent[abs(l_ded[x])]);
 //              printf("Add ded var(%d) ----- cls : %d(%d) %d(%d) %d(%d) (declvl %d lstparent %d)\n", l_ded[x],tmp1, dec_lvl[abs(tmp1)], tmp2, dec_lvl[abs(tmp2)], tmp3, dec_lvl[abs(tmp3)], curr_lvl, least_parent[abs(l_ded[x])]);
               //For debug 
+              /*
               if(lvl1 == curr_lvl && lvl2 == curr_lvl){state = EXIT;  printf("Error \n");
                 printf("Add ded var(%d) to buf ----- cls : %d(%d) %d(%d) %d(%d) (declvl %d)\n", l_ded[x],tmp1, dec_lvl[abs(tmp1)], tmp2, dec_lvl[abs(tmp2)], tmp3, dec_lvl[abs(tmp3)], curr_lvl);
     printf("lstparent: l1-%d, l2-%d, %d\n", lstparent1, lstparent2, least_parent[abs(l_ded[x])]);
                 break;
-              }
+              }*/
             }else if ((var_truth_table[abs(l_ded[x])] == T && l_ded[x] < 0) || (var_truth_table[abs(l_ded[x])] == F && l_ded[x] > 0) ){
                 //Check whether conflict in same level deduction 
                 conf_ded=1; 
@@ -310,7 +310,6 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
 
       case ANALYSIS: 
         //printf("State = ANALYSIS; ");
-
         prev_state = ANALYSIS; 
         
         conf_parents[0] = abs(local_clauses[parent_cls[conf_var]][0]) == conf_var ? 
@@ -342,8 +341,7 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
           parent_lvl[i] = parent_lvl_tmp[sorted_idx[i]]; 
           conf_lst_lvl[i] = lst_tmp[sorted_idx[i]]; 
         }
-
-/*  
+/*
         printf("Analysis Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
         printf("Parents var(lvl) %d(%d) %d(%d) %d(%d) %d(%d) \n", conf_parents[0], parent_lvl[0], conf_parents[1], parent_lvl[1], 
                 conf_parents[2], parent_lvl[2], conf_parents[3], parent_lvl[3]);
@@ -358,13 +356,13 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         }
 
         //Learning 
-        if (dec_lvl[abs(conf_parents[1])] < curr_lvl && (conf_parents[2] == conf_parents[3])){
+        if ((dec_lvl[abs(conf_parents[1])] < curr_lvl) && (conf_parents[2] == conf_parents[3])){
 
           learned_lit[0] = conf_parents[0]; 
           learned_lit[1] = conf_parents[1];
           learned_lit[2] = conf_parents[2];
 
-//        printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
+          //printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
           local_clauses[learn_cls_nxtidx][0] = learned_lit[0];
           local_clauses[learn_cls_nxtidx][1] = learned_lit[1];
           local_clauses[learn_cls_nxtidx][2] = learned_lit[2];
@@ -387,14 +385,14 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
           }
 
           //parent 1
-          if ((conf_parents[1] != conf_parents[0]) && (conf_parents[1] > 0)){
+          if (conf_parents[1] > 0){
             if (pos_cls_end[conf_parents[1]] < BUF_CLS_SIZE){
               pos_cls[conf_parents[1]][pos_cls_end[conf_parents[1]]] = learn_cls_nxtidx;
               pos_cls_end[conf_parents[1]] ++; 
             }else{
               printf("Not enough pos cls buffer\n"); state = FAILED; printf("Error\n"); break;
             }
-          }else if ((conf_parents[1] != conf_parents[0]) && (conf_parents[1] < 0)){
+          }else {
             if (neg_cls_end[-conf_parents[1]] < BUF_CLS_SIZE){
               neg_cls[-conf_parents[1]][neg_cls_end[-conf_parents[1]]] = learn_cls_nxtidx;
               neg_cls_end[-conf_parents[1]] ++; 
@@ -419,12 +417,16 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
               printf("Not enough neg cls buffer\n"); state = FAILED; printf("Error\n"); break;
             } 
           }
-          
           back_lvl = dec_lvl[abs(learned_lit[1])]; 
           state = BACKTRACK_DED; break; 
         }//End of Learning part
 
-
+/*
+        conf_table[conf_table_nxtidx][0] = conf_parents[0];
+        conf_table[conf_table_nxtidx][0] = conf_parents[1];
+        conf_table[conf_table_nxtidx][0] = conf_parents[2];
+        conf_table[conf_table_nxtidx][0] = conf_parents[3];
+*/
         sort4(conf_lst_lvl);
         curr_lst = (conf_lst_lvl[3] != curr_lvl) ? conf_lst_lvl[3]: (conf_lst_lvl[2] != curr_lvl) ? conf_lst_lvl[2] : conf_lst_lvl[1]; 
         if (var_truth_table[dec_var[curr_lvl]] == TF || var_truth_table[dec_var[curr_lvl]] == FT){
@@ -461,7 +463,7 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
           state = FAILED; 
           break;
         }
-  if (back_lvl < 10){
+  if (back_lvl < 7){
         printf("Back to lvl %d - Var %d\n", back_lvl, dec_var[back_lvl]);
   }
 
@@ -498,7 +500,6 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
 
       case BACKTRACK_DED:
         prev_state = BACKTRACK_DED;
-
         //printf("Conflict var %d with dec_lvl(%d), conf_cls(%d) parent_cls(%d)\n", conf_var,dec_lvl[conf_var], conf_cls, parent_cls[conf_var]);
         #pragma ACCEL parallel flatten
         for (int i = 0; i < NUM_VARS; i ++){
@@ -526,7 +527,7 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         //printf("Change VTT Var(%d) to %d\n", dec_var[back_lvl], var_truth_table[dec_var[back_lvl]]);
         curr_lvl = back_lvl;
 
-  if (back_lvl < 10){
+  if (back_lvl < 7){
         printf("Back to learn lvl %d - Var %d\n", back_lvl, dec_var[back_lvl]);
   }
 
