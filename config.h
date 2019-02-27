@@ -1,6 +1,6 @@
 #define NUM_TEST 10
 
-#define NUM_TOT_CLAUSES 1500
+#define NUM_TOT_CLAUSES 2000
 #define NUM_ORG_CLAUSES 1065
 #define NUM_VARS 251
 
