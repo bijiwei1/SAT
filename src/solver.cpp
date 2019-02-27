@@ -14,7 +14,8 @@ void collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][B
   int *extra_cls, int *extra_lit, 
   int* num_extra);
 
-bool deduction(int l1, int l2, char *var_truth_table, int x, int *l_ded);
+bool deduction(int l1, int l2, int var1, int var2, int x, int *l_ded);
+bool deduction4(int l1, int l2, int l3, int var1, int var2, int var3, int x, int *l_ded);
 
 void sort4 (int array[4]); 
 
@@ -51,6 +52,8 @@ void solver_kernel(
   
   int pos_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
   int neg_cls[NUM_VARS][BUF_CLS_SIZE] = {-1}; 
+  int pos_cls_end[NUM_VARS];
+  int neg_cls_end[NUM_VARS];
   int extra_cls[extra_buf_size] = {0}; 
   int extra_lit[extra_buf_size] = {0}; 
 
@@ -102,10 +105,25 @@ void solver_kernel(
     local_clauses[x][1] = c2[x];
     local_clauses[x][2] = c3[x];
 
-    collect_buffer(pos_cls, neg_cls, c1[x], x, extra_cls, extra_lit, num_extra);
-    collect_buffer(pos_cls, neg_cls, c2[x], x, extra_cls, extra_lit, num_extra);
-    collect_buffer(pos_cls, neg_cls, c3[x], x, extra_cls, extra_lit, num_extra);
+    num_extra = collect_buffer(pos_cls, neg_cls, c1[x], x, extra_cls, num_extra);
+    num_extra = collect_buffer(pos_cls, neg_cls, c2[x], x, extra_cls, num_extra);
+    num_extra = collect_buffer(pos_cls, neg_cls, c3[x], x, extra_cls, num_extra);
   }
+
+  for (int x = 0; x < NUM_VARS; x++){
+    for (int y = 0; y < BUF_CLS_SIZE; y++){
+      if (pos_cls[x][y] == EMPTY){
+        pos_cls_end[x] = y; 
+        break ;}
+      }
+
+    for (int y = 0; y < BUF_CLS_SIZE; y++){
+      if (neg_cls[x][y] == EMPTY){
+        neg_cls_end[x] = y; 
+        break ;}
+      }
+  }
+
 /*
 for (int x = 0; x < NUM_ORG_CLAUSES; x++){
     printf("%d %d %d\n", local_clauses[x][0], local_clauses[x][1], local_clauses[x][2]);
@@ -340,55 +358,72 @@ for (int x = 0; x < NUM_ORG_CLAUSES; x++){
         }
 
         //Learning 
-        if (dec_lvl[abs(conf_parents[1])] < curr_lvl){
-  /*
-          if (conf_parents[0] == conf_parents[1]){
-            learned_lit[0] = conf_parents[0]; 
-            learned_lit[1] = conf_parents[2];
-            learned_lit[2] = conf_parents[3];
-          }else 
-*/
-    if (conf_parents[2] == conf_parents[3]){
-            learned_lit[0] = conf_parents[0]; 
-            learned_lit[1] = conf_parents[1];
-            learned_lit[2] = conf_parents[2];
-          }else {
-            learned_lit[0] = 0; 
-    }
+        if (dec_lvl[abs(conf_parents[1])] < curr_lvl && (conf_parents[2] == conf_parents[3])){
 
-    if (learned_lit[0] != 0){ 
-//            printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
-            local_clauses[learn_cls_nxtidx][0] = learned_lit[0];
-            local_clauses[learn_cls_nxtidx][1] = learned_lit[1];
-            local_clauses[learn_cls_nxtidx][2] = learned_lit[2];
+          learned_lit[0] = conf_parents[0]; 
+          learned_lit[1] = conf_parents[1];
+          learned_lit[2] = conf_parents[2];
 
-            for (int j = 0; j < 3; j++){
-      found = 0;
-              if (learned_lit[j] > 0){
-                for (int i = BUF_CLS_END; i >= 0; i --){
-                  if(pos_cls[learned_lit[j]][i] == EMPTY){
-      found = 1;
-                    pos_cls[learned_lit[j]][i] = learn_cls_nxtidx; break;
-                  }
-                }
-                if (!found){ printf("Error: not enough pos cls buf\n"); state= FAILED; }
-              }else {
-                for (int i = BUF_CLS_END; i >= 0; i --){
-                  if(neg_cls[-learned_lit[j]][i] == EMPTY){
-      found = 1;
-                    neg_cls[-learned_lit[j]][i] = learn_cls_nxtidx; break;
-                  }
-                }
-                if (!found){ printf("Error: not enough pos cls buf\n");  state=FAILED; }
-              }
-      }
-            back_lvl = dec_lvl[abs(learned_lit[1])]; 
-            state = (state == FAILED)? FAILED : BACKTRACK_DED; break; 
-    }
-        
+//        printf("Add learn cls(%d) %d %d %d\n", learn_cls_nxtidx, learned_lit[0], learned_lit[1], learned_lit[2]);
+          local_clauses[learn_cls_nxtidx][0] = learned_lit[0];
+          local_clauses[learn_cls_nxtidx][1] = learned_lit[1];
+          local_clauses[learn_cls_nxtidx][2] = learned_lit[2];
+
+          //parent 0
+          if (conf_parents[0] > 0){
+            if (pos_cls_end[conf_parents[0]] < BUF_CLS_SIZE){
+              pos_cls[conf_parents[0]][pos_cls_end[conf_parents[0]]] = learn_cls_nxtidx;
+              pos_cls_end[conf_parents[0]] ++; 
+            }else{
+              printf("Not enough pos cls buffer\n"); state = FAILED; printf("Error\n"); break;
+            } 
+          }else{
+            if (neg_cls_end[-conf_parents[0]] < BUF_CLS_SIZE){
+              neg_cls[-conf_parents[0]][neg_cls_end[-conf_parents[0]]] = learn_cls_nxtidx;
+              neg_cls_end[-conf_parents[0]] ++; 
+            }else{
+              printf("Not enough neg cls buffer\n"); state = FAILED; printf("Error\n"); break;
+            } 
+          }
+
+          //parent 1
+          if ((conf_parents[1] != conf_parents[0]) && (conf_parents[1] > 0)){
+            if (pos_cls_end[conf_parents[1]] < BUF_CLS_SIZE){
+              pos_cls[conf_parents[1]][pos_cls_end[conf_parents[1]]] = learn_cls_nxtidx;
+              pos_cls_end[conf_parents[1]] ++; 
+            }else{
+              printf("Not enough pos cls buffer\n"); state = FAILED; printf("Error\n"); break;
+            }
+          }else if ((conf_parents[1] != conf_parents[0]) && (conf_parents[1] < 0)){
+            if (neg_cls_end[-conf_parents[1]] < BUF_CLS_SIZE){
+              neg_cls[-conf_parents[1]][neg_cls_end[-conf_parents[1]]] = learn_cls_nxtidx;
+              neg_cls_end[-conf_parents[1]] ++; 
+            }else{
+              printf("Not enough neg cls buffer\n"); state = FAILED; printf("Error\n"); break;
+            }
+          }
+
+          //parent 2 
+          if (conf_parents[2] > 0){
+            if (pos_cls_end[conf_parents[2]] < BUF_CLS_SIZE){
+              pos_cls[conf_parents[2]][pos_cls_end[conf_parents[2]]] = learn_cls_nxtidx;
+              pos_cls_end[conf_parents[2]] ++; 
+            }else{
+              printf("Not enough pos cls buffer\n"); state = FAILED; printf("Error\n"); break;
+            } 
+          }else{
+            if (neg_cls_end[-conf_parents[2]] < BUF_CLS_SIZE){
+              neg_cls[-conf_parents[2]][neg_cls_end[-conf_parents[2]]] = learn_cls_nxtidx;
+              neg_cls_end[-conf_parents[2]] ++; 
+            }else{
+              printf("Not enough neg cls buffer\n"); state = FAILED; printf("Error\n"); break;
+            } 
+          }
+          
+          back_lvl = dec_lvl[abs(learned_lit[1])]; 
+          state = BACKTRACK_DED; break; 
         }//End of Learning part
 
-  if (state == FAILED || state == BACKTRACK_DED){break;}
 
         sort4(conf_lst_lvl);
         curr_lst = (conf_lst_lvl[3] != curr_lvl) ? conf_lst_lvl[3]: (conf_lst_lvl[2] != curr_lvl) ? conf_lst_lvl[2] : conf_lst_lvl[1]; 
