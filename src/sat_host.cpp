@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   //std::string test_file="test"+to_string(test_idx);
   //for (int i = 1; i <= NUM_TEST; ++i) { 
   //for (int i = 1; i <= 5; ++i) { 
-    int i = 5;
+    int i = 1;
     auto ts1=std::chrono::high_resolution_clock::now(); 
     //std::string first("./data/uf250/tests/uf250-0");
     std::string first("./data/uuf250/tests/uuf250-0");
