@@ -3,10 +3,11 @@
 #define NUM_TOT_CLAUSES 3000
 #define NUM_ORG_CLAUSES 1065
 #define NUM_VARS 251
+#define NUM_PE 10
 
 #define BUF_CLS_SIZE 35
 #define extra_buf_size 20
-#define BUF_DED_SIZE 200
+#define BUF_DED_SIZE 90
 #define BUF_DEC_LVL 100
 
 
