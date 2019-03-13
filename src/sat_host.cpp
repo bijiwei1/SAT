@@ -41,7 +41,6 @@ int main(int argc, char **argv) {
   uint64_t *data_out3 = (int *)malloc(sizeof(int)*2);
   uint64_t *data_out4 = (int *)malloc(sizeof(int)*2);
   uint64_t *data_out5 = (int *)malloc(sizeof(int)*2);
-  uint64_t *data_out6 = (int *)malloc(sizeof(int)*2);
 
 
 
@@ -75,11 +74,12 @@ int main(int argc, char **argv) {
     wf << "Time (Read file) : " << readtime.count() <<endl;
 
     vector<int> clauses[10000]; 
-    int clauses_idx[NUM_PE][NUM_CLAUSES_PE]; //Only variable idx, If no var, => 255 
+    int clauses_idx[NUM_PE *NUM_CLAUSES_PE]; //Only variable idx, If no var, => 255 
 
     bool var_ismarked[NUM_VARS] ={0};
     bool var_ischecked[NUM_VARS] = {0}; 
-    int var_parents[NUM_VARS] = {-1}; 
+    int var_parents_cls[NUM_VARS] = {-1}; 
+    //vector<int> var_parents[NUM_VARS];
     //int dec_lvl[NUM_VARS] = {-1};
     //int dec_var[BUF_DEC_LVL]= {0}; // Variable idx at each decision lvl, we assume at most 100 decision level
     //uint8_t assigned_stack[NUM_VARS] = {IDLE_VAR}; 
@@ -104,20 +104,23 @@ int main(int argc, char **argv) {
 
     while (state != EXIT){
     switch(state){
+
       case INIT_Kernel: 
         mode = INIT;
         state = PROP; 
         break; 
+
       case LOAD: 
         mode = LOAD; 
-        if (load_cls_num < NUM_ORG_CLAUSES){
-          state = DECISION;
+        if (load_cls_num >= NUM_ORG_CLAUSES){
+          state = DECISION; 
         }else{
           state = PROP;
           data_in1[0] = (abs(c1[load_cls_num])) | (abs(c2[load_cls_num]) << 8) | (abs(c3[load_cls_num]) << 16);
           data_in2[0] = (c1[load_cls_num] > 0 ? POS : NEG) |
                        ((c2[load_cls_num] > 0 ? POS : NEG) << 1) | ((c3[load_cls_num] > 0 ? POS : NEG) << 2);
         }
+
       case DECISION: 
         mode = DECISION; 
         while (var_truth_table[new_var_idx] != U && new_var_idx < NUM_VARS){
@@ -137,7 +140,7 @@ int main(int argc, char **argv) {
           //dec_var[curr_lvl] = new_var_idx; 
           //assigned_stack[num_assigned] = new_var_idx;
           assigned_stack.push_back( new_var_idx<<1 & 1);
-          data_in1[0] = T | (new_var_idx << 1);
+          data_in1[0] = T | (new_var_idx << 1) | (curr_lvl << 9);
         }
         state = PROP;
         break;
@@ -150,13 +153,14 @@ int main(int argc, char **argv) {
        *        data_in2 = {s3, s2, s1} // each 1 bit sign
        *        data_out1 = {cls_no, pe_no} // cls_no(10), pe_no(6)
        *        
-       *  DEC : data_in1 = {var_idx, s} // var_idx(8), sign(1), T/F
+       *  DEC : data_in1 = {curr_lvl, var_idx, s} // var_idx(8), sign(1), T/F
        *        data_out1[0] = {conf_cls_no, conf_cls_pe, conf_var, conf} // conf_cls_no(10), conf_cls_pe(6), conf_var(8), conf(1)
-       *        data_out1[1] =  {xxxx xxxx} //assigned value for the above data
+       *        data_out1[1] =  {num of ded, xxxx xxxx xxxx xxxx} //assigned value for the above data , num of ded variable
        *        data_out2[0/1] = {var_idx*8} //Each 8 bits - total 8*2 variables
        *        data_out3[0/1] = {parent_cls1*4} //Each parent_cls has cls_no(10) & pe_no(6)
        *        data_out4[0/1] = {parent_cls1*4} //Each parent_cls has cls_no(10) & pe_no(6)
-       *  BACK: Same as above         
+       *  BACK: Same as above 
+       *        data_in2 = {back_lvl}        
        */
         solver_kernel(mode, data_in1, data_in2, 
             data_out1, data_out2, data_out3, data_out4);
@@ -165,23 +169,28 @@ int main(int argc, char **argv) {
 
         }else if (mode == LOAD){
           state = LOAD; 
-          int pe_no = data_out1[0] & 0x2f; //6-bit 
-          int local_cls_no = data_out1[0] >> 6; 
-          clauses_idx[pe_no][local_cls_no] = load_cls_num;
+          clauses_idx[data_out1] = load_cls_num;
           load_cls_num ++; 
         }else if ((data_out1[0] & 1) == 1){
           //Conflict
           state = BACKTRACK;
         }else{
           //Not found conflict 
-          int var = data_out2[0] & 0xff; 
-          int sign = data_out1[1] & 0x1;
-          int parent = ;
-          while (var != 0){
-            int newvar_info = sign | var << 1; 
-            assigned_stack.push_back(newvar_info);
-            data_out2= data_out2[0]; 
+          int var, parent_cls, global_cls;
+
+          for (int i = 0; i <= size; i ++){
+            if (i < 8){
+              var = (data_out2[0] >> i*8) & 0xff;
+            }else{
+              var = (data_out2[1] >> i*8) & 0xff;
+            }
+            parent_cls = find_parent_cls(data_out4[2], data_out5[2], i);
+
+            var_truth_table[var] = (data_out1[1] >> i) & 0x1;
+            var_parents_cls[var] = parent_cls; 
+            global_cls = clauses_idx[parent_cls]; 
           }
+         
 
           state = DECISION; 
           
@@ -226,6 +235,7 @@ int main(int argc, char **argv) {
 
         state = PROP;
         data_in1[0] = tmp;
+        data_in2[0] = curr_lvl; 
         break;
 
       case SOLVED:

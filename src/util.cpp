@@ -84,96 +84,52 @@ void read_clause_file(string filename, int *c1, int *c2, int *c3, int *max_size,
   max_size[0] = max; 
   cout << "Max size " << max << endl; 
 
-/*
-  int bound1 = 14;
-  int bound2 = 11; 
-  std::vector<int> v1, v2, v3;
-  for (int i = 1; i < num_var; i++){
-    if (max_cls_size[i] > bound1){
-      v1.push_back(i);
-    }else if (max_cls_size[3] >= bound2){
-      v2.push_back(i); 
-    }else{
-      v3.push_back(i);
-    }
-  }
-
-  int new_idx = 1; 
-  printf("Vector Size: %d, %d, %d\n", v1.size(), v2.size(), v3.size());
-  for (int i = 0; i < v1.size(); i++){
-    int curr_idx = v1.at(i); 
-    for (int j = 1; j < num_clauses; j++){
-      if (c1_local[j] == curr_idx){
-        c1[j] = new_idx; 
-      }else if (c1_local[j] == -curr_idx){
-        c1[j] = -new_idx;
-      }
-
-      if (c2_local[j] == curr_idx){
-        c2[j] = new_idx; 
-      }else if (c2_local[j] == -curr_idx){
-        c2[j] = -new_idx;
-      }
-
-      if (c3_local[j] == curr_idx){
-        c3[j] = new_idx; 
-      }else if (c3_local[j] == -curr_idx){
-        c3[j] = -new_idx;
-      }
-    }
-    new_idx ++; 
-  }
-
-  for (int i = 0; i < v2.size(); i++){
-    int curr_idx = v2.at(i); 
-    for (int j = 1; j < num_clauses; j++){
-      if (c1_local[j] == curr_idx){
-        c1[j] = new_idx; 
-      }else if (c1_local[j] == -curr_idx){
-        c1[j] = -new_idx;
-      }
-
-      if (c2_local[j] == curr_idx){
-        c2[j] = new_idx; 
-      }else if (c2_local[j] == -curr_idx){
-        c2[j] = -new_idx;
-      }
-
-      if (c3_local[j] == curr_idx){
-        c3[j] = new_idx; 
-      }else if (c3_local[j] == -curr_idx){
-        c3[j] = -new_idx;
-      }
-    }
-    new_idx ++; 
-  }
-
-  for (int i = 0; i < v3.size(); i++){
-    int curr_idx = v3.at(i); 
-    for (int j = 1; j < num_clauses; j++){
-      if (c1_local[j] == curr_idx){
-        c1[j] = new_idx; 
-      }else if (c1_local[j] == -curr_idx){
-        c1[j] = -new_idx;
-      }
-
-      if (c2_local[j] == curr_idx){
-        c2[j] = new_idx; 
-      }else if (c2_local[j] == -curr_idx){
-        c2[j] = -new_idx;
-      }
-
-      if (c3_local[j] == curr_idx){
-        c3[j] = new_idx; 
-      }else if (c3_local[j] == -curr_idx){
-        c3[j] = -new_idx;
-      }
-    }
-    new_idx ++; 
-  }*/
-
   cout << "Number of clauses : " << cnt << endl << "Finish reading file" << endl;
 
   f.close();
   return ;
+}
+
+
+int find_parent_cls( uint64_t data_out4[2], uint64_t data_out5[2], int i){
+  int par_cls ;
+  switch(i){
+    case 0: 
+      par_cls = data_out4[0] & 0xffff; break;
+    case 1:  
+      par_cls = data_out4[0] >> 16 & 0xffff; break;
+    case 2:  
+      par_cls = data_out4[0] >> 32 & 0xffff; break;
+    case 3:  
+      par_cls = data_out4[0] >> 46 & 0xffff; break;
+    case 4: 
+      par_cls = data_out4[1] & 0xffff; break;
+    case 5:  
+      par_cls = data_out4[1] >> 16 & 0xffff; break;
+    case 6:  
+      par_cls = data_out4[1] >> 32 & 0xffff; break;
+    case 7:  
+      par_cls = data_out4[1] >> 46 & 0xffff; break;
+
+    case 8: 
+      par_cls = data_out5[0] & 0xffff; break;
+    case 9:  
+      par_cls = data_out5[0] >> 16 & 0xffff; break;
+    case 10:  
+      par_cls = data_out5[0] >> 32 & 0xffff; break;
+    case 11:  
+      par_cls = data_out5[0] >> 46 & 0xffff; break;
+    case 12: 
+      par_cls = data_out5[1] & 0xffff; break;
+    case 13:  
+      par_cls = data_out5[1] >> 16 & 0xffff; break;
+    case 14:  
+      par_cls = data_out5[1] >> 32 & 0xffff; break;
+    case 15:  
+      par_cls = data_out5[1] >> 46 & 0xffff; break;
+    default:
+        assert(0);
+  }
+  return par_cls; 
+
 }
