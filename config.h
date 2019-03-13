@@ -1,7 +1,7 @@
 #define NUM_TEST 10
 
 #define NUM_ORG_CLAUSES 218
-#define NUM_CLAUSES_PE 1024 m // should < 2^16
+#define NUM_CLAUSES_PE 1024 // should < 2^10
 #define NUM_VARS 51
 #define NUM_PE 64
 #define MAX_NUM_LIT 10 //Need to change pos_pid_cls
@@ -33,8 +33,9 @@
 #define ANALYSIS 4
 #define FAILED 5
 #define EXIT 6
-#define BACKTRACK_DEC 7
-#define BACKTRACK_DED 8
+#define BACKTRACK 7
+#define INIT 8
+#define LOAD 9
 
 #define IDLE_32 65535 //0xffff
 #define EMPTY 65535

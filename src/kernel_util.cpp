@@ -3,8 +3,57 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include <config.h>
+
+int priority_encoder_8(int in){
+  int pos = ((in & 0x80) != 0) ? 7 : 
+    ((in & 0x40) != 0) ? 6 : 
+    ((in & 0x20) != 0) ? 5 :
+    ((in & 0x10) != 0) ? 4 : 
+    ((in & 0x08) != 0) ? 3 : 
+    ((in & 0x04) != 0) ? 2 : 
+    ((in & 0x02) != 0) ? 1 :
+    ((in & 0x01) != 0) ? 0 : -1;
+
+    return pos; 
+}
+
+int priority_encoder_16(int in){
+    int pos = (in & 0x8000) != 0 ? 15 : 
+        (in & 0x4000) != 0 ? 14 : 
+        (in & 0x2000) != 0 ? 13 : 
+        (in & 0x1000) != 0 ? 12 : 
+        (in & 0x0800) != 0 ? 11 : 
+        (in & 0x0400) != 0 ? 10 : 
+        (in & 0x0200) != 0 ? 9 : 
+        (in & 0x0100) != 0 ? 8 : 
+        (in & 0x0080) != 0 ? 7 : 
+        (in & 0x0040) != 0 ? 6 : 
+        (in & 0x0020) != 0 ? 5 : 
+        (in & 0x0010) != 0 ? 4 : 
+        (in & 0x0008) != 0 ? 3 : 
+        (in & 0x0004) != 0 ? 2 : 
+        (in & 0x0002) != 0 ? 1 : 
+        (in & 0x0001) != 0 ? 0 : -1;
+    return pos;
+}
+
+int priority_encoder_64(uint64_t in){
+
+    int pos_1  = priority_encoder_16(in&0xffff);
+    int pos_2  = priority_encoder_16(in >> 16 &0xffff);
+    int pos_3  = priority_encoder_16(in >> 32 &0xffff);
+    int pos_4  = priority_encoder_16(in >> 48 &0xffff);
+
+    int pos = (pos_4 != -1)? pos_4 : 
+            (pos_3 != -1)? pos_3 :
+            (pos_2 != -1)? pos_2 :
+            (pos_1 != -1)? pos_1 : -1;
+
+    return pos;
+}
 
 /*
 bool collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 

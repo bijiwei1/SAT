@@ -10,32 +10,6 @@
 //using namespace std; 
 
 
-bool collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
-  int lit, int x);
-
-bool deduction3(int l1, int l2, int var1, int var2, int x, int pe_no, int l_ded[NUM_PE][BUF_CLS_SIZE]);
-bool deduction4(int l1, int l2, int l3, int var1, int var2, int var3, int x, int pe_no, int l_ded[NUM_PE][BUF_CLS_SIZE]);
-
-void sort4 (int array[4]); 
-
-void sort4_idx (int array[4], int idx[4]);
-
-
-
-int priority_encoder_8(int in){
-  int pos = ((in & 0x80) != 0) ? 7 : 
-    ((in & 0x40) != 0) ? 6 : 
-    ((in & 0x20) != 0) ? 5 :
-    ((in & 0x10) != 0) ? 4 : 
-    ((in & 0x08) != 0) ? 3 : 
-    ((in & 0x04) != 0) ? 2 : 
-    ((in & 0x02) != 0) ? 1 :
-    ((in & 0x01) != 0) ? 0 : -1;
-
-    return pos; 
-}
-
-
 /*
 *  data_in1(32), data_in2(32), 
 *  data_out1(64)
@@ -55,14 +29,21 @@ int priority_encoder_8(int in){
 */
 
 
+int priority_encoder_16(int in);
+int priority_encoder_64(uint64_t in);
+
 #pragma ACCEL kernel
 void solver_kernel(int mode, int* data_in1, int* data_in2, 
-            int* data_out1, int* data_out2, int* data_out3, int* data_out4){
+            uint64_t* data_out1, uint64_t* data_out2, uint64_t* data_out3, uint64_t* data_out4){
 
-#pragma ACCEL interface variable=c1 depth = 1
-#pragma ACCEL interface variable=c2 depth = 1
-#pragma ACCEL interface variable=c3 depth = 1
-#pragma ACCEL interface variable=result depth=1
+#pragma ACCEL interface variable=mode depth = 1
+#pragma ACCEL interface variable=data_in1 depth = 1
+#pragma ACCEL interface variable=data_in2 depth = 1
+#pragma ACCEL interface variable=data_out1 depth = 2
+#pragma ACCEL interface variable=data_out2 depth = 2
+#pragma ACCEL interface variable=data_out3 depth = 2
+#pragma ACCEL interface variable=data_out4 depth = 2
+#pragma ACCEL interface variable=data_out5 depth = 2
 /************************ Variable Declaration **************************/
 
   int local_mode = mode; 
@@ -82,10 +63,10 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
   uint8_t var_truth_table[NUM_VARS]; // T, F, U (Undef)
   int var_dec_lvl[NUM_VARS]; 
 
-  int buf_ded_lit[BUF_DED_SIZE] = {0};
-  int buf_ded_cls[BUF_DED_SIZE] = {-1}; 
-  int buf_ded_parent_cls[BUF_DED_SIZE] = {-1}; 
-  //int parent_cls[NUM_VARS] = {0}; //pe: 0 - 5, cls: > 6 (10 bit)
+  int buf_ded_lit[BUF_DED_SIZE];
+  uint64_t buf_ded_parent_cls[BUF_DED_SIZE]; //pe: 0-5, cls: >6 (10bit)
+  int buf_ded_curr = -1;
+  int buf_ded_end = -1;
 
   /* Used for each PE*/
   int l_ded[NUM_PE][NUM_P];
@@ -93,21 +74,19 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
   bool conflict[NUM_PE][NUM_P];
 
   /* Used for collecting all PE*/
-  int tot_conflict[NUM_P], is_ded[NUM_P]; // num of bits = num_pe 
+  uint64_t tot_conflict[NUM_P], is_ded[NUM_P]; // num of bits = num_pe 
   int conf_pe, ded_pe;
   uint8_t conf_p, ded_p;
   int conf_cls; // pe: 0 - 5, cls: > 6 (10 bit)
   uint8_t conf_var;
 
   //Idx and ptr  
-  int buf_ded_curr = -1;
-  int buf_ded_end = -1;
 
   //Other global variables
-  uint8_t prop_var = data_in1[0];; 
-  int back_lvl = 0; 
+  uint8_t prop_var;
+  int curr_lvl; 
 
-
+  int ii;
   if (local_mode == INIT){
     /*************************** Initializing array ***************************/
     for (int i = 0; i < NUM_PE; i++){
@@ -159,30 +138,29 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
     clauses[avail_pe][clauses_cls_size[avail_pe]][1] = var2;
     clauses[avail_pe][clauses_cls_size[avail_pe]][2] = var3;
     clauses_sign[avail_pe][cls_idx] = data_in2[0];
-    //printf("Add cls %d %d %d to pe %d idx %d\n", var1, var2, var3, avail_pe, clauses_cls_size[avail_pe]);
 
     //Write variable info
     watch_var_info[avail_pe][cls_idx][0] = (var1 << 5);
     watch_var_info[avail_pe][cls_idx][1] = 1 | (var2 << 5);
     pid_cls_info[avail_pe][var1][avail_idx1] = clauses_cls_size[avail_pe];
     pid_cls_info[avail_pe][var2][avail_idx2] = clauses_cls_size[avail_pe];
-    clauses_cls_size[avail_pe] += 1; 
-  }
+    clauses_cls_size[avail_pe] ++; 
 
-  /*
+    data_out1[0] = avail_pe | cls_idx << 6;
+    printf("Add cls %d %d %d to pe %d idx %d\n", var1, var2, var3, avail_pe, clauses_cls_size[avail_pe]);
+
+    /*
   for (int i = 0; i < NUM_PE; i++){
     for (int j = 0; j < clauses_cls_size[i]; j++){
       printf("PE %d(cls_no %d): clause %d %d %d, sign %d\n", i, j, clauses[i][j][0], clauses[i][j][1], clauses[i][j][2], clauses_sign[i][j]);
     }
   } */
 
-  }else if (mode = DEC || mode = BACKTRACK || mode = PROP){
+  }else if (mode == DECISION || mode == BACKTRACK){
 
-
-    prop_var = data_in1[0] >> 1;
-    var_truth_table[prop_var] = dataa_in[0] & 0x1; 
-    
-
+    prop_var = data_in1[0] >> 1 & 0xff;
+    var_truth_table[prop_var] = data_in1[0] & 0x1; 
+    curr_lvl = data_in1[0] >> 9;
 
     if (mode == BACKTRACK){
       for (int i = 0; i < NUM_VARS; i++){
@@ -209,10 +187,10 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
         int other_watch_var = other_watch_info >>5;
         if (var_truth_table[prop_var] != prop_var_sign || var_truth_table[other_watch_var] != other_watch_sign){
             //Do nothing since either one  is true
-             
         }else if (var_truth_table[other_watch_var] == other_watch_sign){
             //The other var_truth table is false
           conflict[pe_no][i] = 1; 
+          printf("Found conflict - pe_no %d, cls_no%d\n", pe_no, i);
         }else{
           // var_truth_table[other_watch_info] == U
           int nxt_unassign_pid = (var_truth_table[clauses[pe_no][cls_no][0]] == U && clauses[pe_no][cls_no][0] != other_watch_var) ? 0 : 
@@ -230,6 +208,7 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
             //This is the last unassigned variable 
             cls_ded[pe_no][i] = cls_no;
             l_ded[pe_no][i]= (other_watch_sign == POS) ? other_watch_var : -other_watch_var;
+            printf("Found ded var %d, - pe_no %d, cls_no %d\n", pe_no, i);
           }else{
             watch_var_info[pe_no][cls_no][0] = other_watch_info;
             int new_watch_info = nxt_unassign_pid | (clauses[pe_no][cls_no][nxt_unassign_pid] >> 5);
@@ -262,7 +241,7 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
     is_ded[1] = 1;
     is_ded[2] = 2;
     is_ded[3] = 3;
-    #pragma ACCEL parallel flatten reduction=tot_conflict
+    #pragma ACCEL parallel flatten reduction=is_ded
     for (int i = 0; i < NUM_PE ; i++){
       for (int j = 0; j < NUM_P; j++){
         is_ded[j] |= (cls_ded[i][j] == -1 ? 0 : 1<<i); 
@@ -278,42 +257,40 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
         conf_pe = priority_encoder_16(tot_conflict[conf_p]); 
         conf_var = prop_var;
         conf_cls = (pid_cls_info[conf_pe][prop_var][conf_p] >> 6) & conf_pe;
-        state = BACKTRACK_DEC; 
         break; 
     }
 
     for (int x = 0; x < NUM_P; x++){
-      ded_pe = priority_encoder_16(is_ded[x]);
+      ded_pe = priority_encoder_64(is_ded[x]);
       while (ded_pe != -1){
         int var_ded = abs(l_ded[ded_pe][x]);
         int var_ded_value = (l_ded[ded_pe][x] == POS) ? T : F; 
         if (var_truth_table[var_ded] == U){
           buf_ded_end ++;
           buf_ded_lit[buf_ded_end] = l_ded[ded_pe][x]; 
-          buf_ded_cls[buf_ded_end] = cls_ded[ded_pe][x]; 
           buf_ded_parent_cls[buf_ded_end] =  (cls_ded[ded_pe][x] >> 6 )& ded_pe; 
+          printf("Add ded var %d due to cls %d\n", buf_ded_lit[buf_ded_end], buf_ded_parent_cls[buf_ded_end]);
           //Change ded value here
-          dec_lvl[var_ded] = curr_lvl;  
           var_truth_table[var_ded] = l_ded[ded_pe][x] > 0 ? T : F;
-          num_assigned++;
         }else if (var_truth_table[var_ded] != var_ded_value){
           //Found conflict in same level
-          conf_ded=1; 
+          conf_p=1; 
           conf_var = var_ded;
           conf_cls = cls_ded[ded_pe][x] & (ded_pe >> 16);
-            //printf("Found inner conflict Var(%d) due to cls(%d) with parentcls(%d)\n", conf_var, conf_cls, parent_cls[var_ded]);
+          printf("Found inner conflict Var(%d) due to cls(%d)\n", conf_var, conf_cls);
         }
       }
+      is_ded[x] ^= (1 << ded_pe);
     }
 
     assert (buf_ded_end < BUF_DED_SIZE);
 
-    if (conf_ded){
+    if (conf_p){
       //Found conflict 
-      buf_ded_curr = -1; buf_ded_end = -1; isdone = 1; 
+      isdone = 1;
     }else if (buf_ded_curr == buf_ded_end){
       //No deducted variable in buf_ded
-      buf_ded_curr = -1; buf_ded_end = -1; isdone = 1;
+      isdone = 1;
     }else{
       //Move to next variable in buf_ded
       buf_ded_curr++;
@@ -323,7 +300,7 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
     }//End of isdone while loop
 
 
-    int conf_info_out = conf_ded | conf_var << 1 |  conf_cls << 9;
+    int conf_info_out = conf_p | conf_var << 1 |  conf_cls << 9;
     int assigned_value = 0; 
     int var_idx_out1 = 0; 
     int var_idx_out2 = 0; 
@@ -331,7 +308,7 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
     #pragma ACCEL parallel flatten reduction=assigned_value
     for (int i = 0; i < BUF_DED_SIZE; i++){
       if (i <= buf_ded_end){
-        assigned_value |= (var_truth_table[abs(buf_ded[i])] << i); 
+        assigned_value |= (var_truth_table[abs(buf_ded_lit[i])] << i); 
       }
     }
 
@@ -339,9 +316,9 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
     for (int i = 0; i < BUF_DED_SIZE; i++){
       if (i <= buf_ded_end){
         if (i < 8){
-          var_idx_out1 |= (abs(buf_ded[i])) << (8*i);  
+          var_idx_out1 |= (abs(buf_ded_lit[i])) << (8*i);  
         }else {
-          var_idx_out2 |= (abs(buf_ded[i])) << (8*(i-1));  
+          var_idx_out2 |= (abs(buf_ded_lit[i])) << (8*(i-1));  
         }
       }
     }
@@ -352,24 +329,24 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
     data_out2[1] = var_idx_out2;
 
     data_out3[0] = ((buf_ded_end >= 0) ? buf_ded_parent_cls[0] : 0) | 
-                  ((buf_ded_end >= 1) ? buf_ded_parent_cls[1] >> 16: 0) |
-                  ((buf_ded_end >= 2) ? buf_ded_parent_cls[2] >> 32: 0) |
-                  ((buf_ded_end >= 3) ? buf_ded_parent_cls[1] >> 48: 0) ; 
+                  ((buf_ded_end >= 1) ? buf_ded_parent_cls[1] << 16: 0) |
+                  ((buf_ded_end >= 2) ? buf_ded_parent_cls[2] << 32: 0) |
+                  ((buf_ded_end >= 3) ? buf_ded_parent_cls[1] << 48: 0) ; 
 
     data_out3[1] =  ((buf_ded_end >= 4) ? buf_ded_parent_cls[4] : 0) | 
-                  ((buf_ded_end >= 5) ? buf_ded_parent_cls[5] >> 16: 0) |
-                  ((buf_ded_end >= 6) ? buf_ded_parent_cls[6] >> 32: 0) |
-                  ((buf_ded_end >= 7) ? buf_ded_parent_cls[7] >> 48: 0) ; 
+                  ((buf_ded_end >= 5) ? buf_ded_parent_cls[5] << 16: 0) |
+                  ((buf_ded_end >= 6) ? buf_ded_parent_cls[6] << 32: 0) |
+                  ((buf_ded_end >= 7) ? buf_ded_parent_cls[7] << 48: 0) ; 
 
     data_out4[0] =  ((buf_ded_end >= 8) ? buf_ded_parent_cls[8] : 0) | 
-                  ((buf_ded_end >= 9) ? buf_ded_parent_cls[9] >> 16: 0) |
-                  ((buf_ded_end >= 10) ? buf_ded_parent_cls[10] >> 32: 0) |
-                  ((buf_ded_end >= 11) ? buf_ded_parent_cls[11] >> 48: 0) ; 
+                  ((buf_ded_end >= 9) ? buf_ded_parent_cls[9] << 16: 0) |
+                  ((buf_ded_end >= 10) ? buf_ded_parent_cls[10] << 32: 0) |
+                  ((buf_ded_end >= 11) ? buf_ded_parent_cls[11] << 48: 0) ; 
 
     data_out4[0] =  ((buf_ded_end >= 12) ? buf_ded_parent_cls[12] : 0) | 
-                  ((buf_ded_end >= 13) ? buf_ded_parent_cls[13] >> 16: 0) |
-                  ((buf_ded_end >= 14) ? buf_ded_parent_cls[14] >> 32: 0) |
-                  ((buf_ded_end >= 15) ? buf_ded_parent_cls[15] >> 48: 0) ;              
+                  ((buf_ded_end >= 13) ? buf_ded_parent_cls[13] << 16: 0) |
+                  ((buf_ded_end >= 14) ? buf_ded_parent_cls[14] << 32: 0) |
+                  ((buf_ded_end >= 15) ? buf_ded_parent_cls[15] << 48: 0) ;              
 
   }//End of mode DEC
 
@@ -387,7 +364,8 @@ void solver_kernel(int mode, int* data_in1, int* data_in2,
 
   
 
-      
+      ii++;
+    printf("Check %d\n", ii);
 
       
 
