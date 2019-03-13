@@ -1,9 +1,8 @@
 #define NUM_TEST 10
 
-#define NUM_TOT_CLAUSES 10000
-#define NUM_ORG_CLAUSES 1065
+#define NUM_ORG_CLAUSES 218
 #define NUM_CLAUSES_PE 1000 // should < 2^16
-#define NUM_VARS 251
+#define NUM_VARS 51
 #define NUM_PE 64
 #define MAX_NUM_LIT 10 //Need to change pos_pid_cls
 #define NUM_P 4
@@ -26,7 +25,6 @@
 #define NEG 1
 #define POS 0
 
-#define IDLE 255
 
 #define SOLVED 0
 #define DECISION 1
@@ -38,6 +36,6 @@
 #define BACKTRACK_DEC 7
 #define BACKTRACK_DED 8
 
-#define EMPTY -1
-
-
+#define IDLE_32 65535 //0xffff
+#define EMPTY 65535
+#define IDLE_VAR 255

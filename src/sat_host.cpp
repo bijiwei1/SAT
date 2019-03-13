@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
   int *c3 = (int *)malloc(sizeof(int) * NUM_ORG_CLAUSES);
   int *max_size = (int *)malloc(sizeof(int) * 1); 
  
-  int *result = (int *)malloc(sizeof(int));
+  int *result = (int *)malloc(sizeof(int)*NUM_VARS);
 
   if (argc < 2) {
     cout << "Usage: ./a.out <data path>" << endl;
@@ -52,14 +52,13 @@ int main(int argc, char **argv) {
   //for (int i = 1; i <= 5; ++i) { 
     int i = 5;
     auto ts1=std::chrono::high_resolution_clock::now(); 
-    std::string first("./data/uf250/tests/uf250-0");
+    std::string first("../benchmark/uf50-218/uf50-0");
     //std::string first("./data/uuf250/tests/uuf250-0");
     std::string f_end(".cnf");
     //istd::string fileName=first+test_file+end;
     std::string fileName=first+std::to_string(i)+f_end;
     read_clause_file(fileName, c1, c2, c3, max_size, NUM_VARS, NUM_ORG_CLAUSES);
-    cout << "Max Number of cls for the same variable is " << max_size[0]<<endl;
-    // cout << "Clause :"<< c1[0] << " " << c2[0]<< " " <<c3[0] << endl; 
+    //for (int i = 0; i < NUM_ORG_CLAUSES; i++){cout << "Clause :"<< c1[i] << " " << c2[i]<< " " <<c3[i] << endl; }
     auto ts2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> readtime = ts2 -ts1; 
     wf<<"TestCase: " << fileName <<endl;  

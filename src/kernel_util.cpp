@@ -5,6 +5,8 @@
 #include <stdio.h>
 
 #include <config.h>
+
+/*
 bool collect_buffer(int pos_cls[NUM_VARS][BUF_CLS_SIZE], int neg_cls[NUM_VARS][BUF_CLS_SIZE], 
   int lit, int x){
    
