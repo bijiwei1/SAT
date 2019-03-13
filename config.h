@@ -1,7 +1,7 @@
 #define NUM_TEST 10
 
 #define NUM_ORG_CLAUSES 218
-#define NUM_CLAUSES_PE 1000 // should < 2^16
+#define NUM_CLAUSES_PE 1024 m // should < 2^16
 #define NUM_VARS 51
 #define NUM_PE 64
 #define MAX_NUM_LIT 10 //Need to change pos_pid_cls

@@ -36,18 +36,35 @@ int priority_encoder_8(int in){
 }
 
 
+      /*
+       *  data_in1(32), data_in2(32), 
+       *  data_out1(64)
+       *  INIT: initial kernel
+       *  LOAD: data_in1 = {c3, c2, c1} // each 8 bit var idx, 
+       *        data_in2 = {s3, s2, s1} // each 1 bit sign
+       *        data_out1 = {cls_no, pe_no} // cls_no(10), pe_no(6)
+       *        
+       *  DEC : data_in1 = {var_idx, s} // var_idx(8), sign(1), T/F
+       *        data_out1[0] = {conf_cls_no, conf_cls_pe, conf_var, conf} // conf_cls_no(10), conf_cls_pe(6), conf_var(8), conf(1)
+       *        data_out1[1] =  {xxxx xxxx} //assigned value for the above data
+       *        data_out2[0/1] = {var_idx*8} //Each 8 bits - total 8*2 variables
+       *        data_out3[0/1] = {parent_cls1*4} //Each parent_cls has cls_no(10) & pe_no(6)
+       *        data_out4[0/1] = {parent_cls1*4} //Each parent_cls has cls_no(10) & pe_no(6)
+       *  BACK: Same as above         
+       */
+
 
 #pragma ACCEL kernel
-void solver_kernel(
-        int* c1, int* c2, int* c3, int* result){
+void solver_kernel(int mode, int* data_in1, int* data_in2, 
+            int* data_out1, int* data_out2, int* data_out3, int* data_out4){
 
-#pragma ACCEL interface variable=c1 depth = 218
-#pragma ACCEL interface variable=c2 depth = 218
-#pragma ACCEL interface variable=c3 depth = 218
+#pragma ACCEL interface variable=c1 depth = 1
+#pragma ACCEL interface variable=c2 depth = 1
+#pragma ACCEL interface variable=c3 depth = 1
 #pragma ACCEL interface variable=result depth=1
 /************************ Variable Declaration **************************/
-  int satisfiable; 
-  int unsatisfiable = 0; 
+
+  int mode_local; 
 
   //Table and buffers
   /*
@@ -55,23 +72,17 @@ void solver_kernel(
    */
   uint8_t clauses[NUM_PE][NUM_CLAUSES_PE][MAX_NUM_LIT]; //Only variable idx, If no var, => 255 
   uint16_t clauses_sign[NUM_PE][NUM_CLAUSES_PE]; // 
-  uint16_t clauses_cls_size[NUM_PE] = {0}; 
+  uint16_t clauses_cls_size[NUM_PE]; 
   uint16_t watch_var_info[NUM_PE][NUM_CLAUSES_PE][2]; //bit 0 - 7 : var_idx, 8 - 11 : pid
   uint16_t pid_cls_info[NUM_PE][NUM_VARS][NUM_P] = {EMPTY}; //bit 0 - 4: pid pos, > 5 : cls
 
 
   /* Variable Information */
-  uint8_t var_truth_table[NUM_VARS] = {U}; // T, F, U (Undef)
-  //bool var_ischecked[NUM_VARS] = {0};
-  uint32_t var_ischecked[NUM_VARS] = 0;
-  bool var_ismarked[NUM_VARS] ={0};
-  int dec_lvl[NUM_VARS] = {-1};
-  int dec_var[BUF_DEC_LVL]= {0}; // Variable idx at each decision lvl, we assume at most 100 decision level
-  uint8_t assigned_stack[NUM_VARS] = {IDLE_VAR}; 
-  int num_assigned = 0; 
+  uint8_t var_truth_table[NUM_VARS]; // T, F, U (Undef)
+
   int buf_ded[BUF_DED_SIZE] = {0};
   int buf_ded_cls[BUF_DED_SIZE] = {-1}; 
-  int parent_cls[NUM_VARS] = {0}; // 0 - 16: cls, > 17 : pe_no
+  int parent_cls[NUM_VARS] = {0}; // 0 - 15: cls, > 16 : pe_no
 
   //int least_parent[NUM_VARS] = {0};
   //int dec_lst_lvl[BUF_DEC_LVL] = {-1}; 
@@ -88,35 +99,28 @@ void solver_kernel(
   int conf_cls; // 0 -16:cls, > 17 -pe
   uint8_t conf_var;
 
-  //Idx and ptr 
-  int new_var_idx = 1;
-  int curr_lvl = -1; 
+  //Idx and ptr  
   int buf_ded_curr = -1;
   int buf_ded_end = -1;
 
   //Other global variables
-  int state = DECISION; 
-  int prev_state = DECISION; 
-  uint8_t prop_var; 
+  uint8_t prop_var = data_in1[0];; 
   int back_lvl = 0; 
 
-  //Temporary variabels
-  bool conf_ded; //PROP
-  int prev_assigned_value; // BACKTRACK
-  int curr_lst;
 
 /*************************** Initializing array ***************************/
+  if (mode_local == INIT){
     for (int i = 0; i < NUM_PE; i++){
-        for (int j = 0; j < NUM_VARS; j++){
-            for (int k = 0; k < NUM_P; k++){
-                pid_cls_info[i][j][k] = EMPTY;
-            }
+      for (int j = 0; j < NUM_VARS; j++){
+        for (int k = 0; k < NUM_P; k++){
+          pid_cls_info[i][j][k] = EMPTY;
         }
+      }
     }
-  for (int x = 0; x< NUM_VARS; x++){
+    for (int x = 0; x< NUM_VARS; x++){
      var_truth_table[x] = U; 
-  }
-
+    }
+  }else if (mode_local == LOAD){
 /*************************** Loading Clauses ***************************/
   //Load data
   printf("Start to load data \n");
@@ -137,7 +141,7 @@ void solver_kernel(
                 (pid_cls_info[avail_pe][var2][1] == EMPTY) ? 1 : 
                 (pid_cls_info[avail_pe][var2][2] == EMPTY) ? 2 :
                 (pid_cls_info[avail_pe][var2][3] == EMPTY) ? 3 : -1;      
-      if (avail_idx1 != -1 && avail_idx2 != -2)
+      if (avail_idx1 != -1 && avail_idx2 != -1)
           goto end;
     }
 end:;
@@ -168,38 +172,14 @@ end:;
   } */
 
 
-/********************************* FSM **********************************/
-  while (state != EXIT){
-  switch(state){
-    case DECISION: 
+  }else if (mode = DEC){
 
-      while (new_var_idx < NUM_VARS){
-        if (var_truth_table[new_var_idx] != U){
-          //printf("Skip var %d(Value - %d)\n", new_var_idx, var_truth_table[new_var_idx]); 
-          new_var_idx ++; 
-        }else{
-          break; 
-        }
-      } 
-        
-      if (new_var_idx == NUM_VARS){
-        state = SOLVED; 
-      }else {
-        state = PROP;
-        curr_lvl ++; 
-        printf("Decide Var(%d) - at lvl %d\n", new_var_idx, curr_lvl);
 
-        var_truth_table[new_var_idx] = T;
-        dec_lvl[new_var_idx] = curr_lvl; 
-        dec_var[curr_lvl] = new_var_idx; 
-        assigned_stack[num_assigned] = new_var_idx;
-        num_assigned ++;
-      }
+  }
 
-      prev_state = DECISION; 
-      break;
 
-    case PROP:
+
+
       if (prev_state == DECISION || prev_state == BACKTRACK_DEC){
         prop_var = new_var_idx;
       }else if (prev_state == DEDUCTION){
@@ -346,65 +326,7 @@ end:;
       }
       break; 
 
-      case ANALYSIS: 
-        //printf("State = ANALYSIS; "
-        /*
-        for (int i = 0; i < MAX_NUM_LIT; i++){
-            int conf_pe = ; 
-            clauses
-        }
-        for (i = num_assigned; i >=0; i--){
-         
-        } */
-        
-        state = BACKTRACK_DEC;
-        break; 
-
-      case BACKTRACK_DEC: 
-        //printf("State = BACKTRACK_DEC; ");
-        back_lvl = curr_lvl; 
-        prev_state = BACKTRACK_DEC;
-
-        /*
-        while(var_ischecked[dec_var[back_lvl]] && back_lvl >= 0){
-          back_lvl --; 
-        }*/
-
-        if (back_lvl < 0){
-          printf("Failed at lvl %d\n", back_lvl);
-          state = FAILED; 
-          break;
-        }
-
-        printf("Back to lvl %d - Var %d\n", back_lvl, dec_var[back_lvl]);
-
-        prev_assigned_value = var_truth_table[dec_var[back_lvl]]; 
-        //Undo all variable assignment after back_lvl
-        #pragma ACCEL parallel flatten
-        for (int i = 0; i < NUM_VARS; i ++){
-          if (dec_lvl[i] >= back_lvl){
-            var_truth_table[i] = U;
-            dec_lvl[i] = -1; 
-            parent_cls[i] = -1;
-          }
-        }
-
-        #pragma ACCEL parallel flatten
-        for (int i = 0; i < BUF_DEC_LVL; i++){
-          if (i > back_lvl){
-            dec_var[i] = 0; 
-          }
-        }
-
-        new_var_idx = dec_var[back_lvl]; 
-        var_truth_table[new_var_idx] = (prev_assigned_value == T) ? F : T;
-        dec_lvl[new_var_idx] = back_lvl;
-        //least_parent[new_var_idx] = new_var_idx;
-        //printf("Change VTT Var(%d) to %d\n", dec_var[back_lvl], var_truth_table[dec_var[back_lvl]]);
-        curr_lvl = back_lvl; 
-
-        state = PROP;
-        break;
+    
 
         /*
       case BACKTRACK_DED:
@@ -440,23 +362,8 @@ end:;
         break; 
         */
 
-      case SOLVED:
-        printf("Solved\n");
-        /*
-        for (int i = 0; i < NUM_VARS; i++){
-            result[i] = var_truth_table[i];
-        }*/
-        result[0] = 1;
-        state = EXIT;
-        break; 
+      
 
-      case FAILED:
-        printf("Failed to solve the problem. \n");
-        result[0] = 0;
-        state = EXIT; 
-        break;
-    }//end of sw
-  }//end of while
 
 
 
